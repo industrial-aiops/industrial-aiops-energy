@@ -1,0 +1,49 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "iaiops-energy"
+version = "0.1.0"
+description = "Energy edition (变电/电力) for Industrial-AIOps — IEC-104 / DNP3 / IEC-61850 read-only connectors on top of iaiops.core."
+readme = "README.md"
+requires-python = ">=3.11"
+license = "MIT"
+authors = [{ name = "wei", email = "zhouwei008@gmail.com" }]
+keywords = ["OT", "SCADA", "IEC-104", "DNP3", "IEC-61850", "substation", "energy", "AIOps"]
+# Depends on the base Industrial-AIOps package for the shared core (governance /
+# brain / runtime / normalized model) and the MCP server infra it registers onto.
+dependencies = ["iaiops>=0.7,<0.8"]
+
+[project.optional-dependencies]
+# Protocol client libs — imported LAZILY so the package installs without them.
+iec104 = ["c104>=2.0,<3"]
+dnp3 = ["pydnp3>=0.1,<1"]
+# libiec61850 SWIG binding (linux-only wheel); the marker keeps a non-linux
+# install from failing wholesale — iec61850 just no-ops off-linux.
+iec61850 = ["pyiec61850>=1.5.2a1,<2; platform_system == 'Linux'"]
+# Full energy edition bundle.
+energy = ["iaiops-energy[iec104]", "iaiops-energy[dnp3]", "iaiops-energy[iec61850]"]
+dev = ["pytest>=8", "ruff>=0.6", "bandit>=1.7"]
+
+[project.scripts]
+iaiops-energy-mcp = "iaiops_energy.mcp.server:main"
+
+[project.urls]
+Homepage = "https://github.com/industrial-aiops/industrial-aiops-energy"
+"Base package" = "https://github.com/industrial-aiops/industrial-aiops"
+
+[tool.hatch.build.targets.wheel]
+packages = ["iaiops_energy"]
+
+[tool.ruff]
+line-length = 100
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "N", "W", "UP"]
+
+[tool.pytest.ini_options]
+markers = [
+    "unit: fast unit tests (mocked drivers, no live gear)",
+    "integration: require a reachable RTU / IED",
+]

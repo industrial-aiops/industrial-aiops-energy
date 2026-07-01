@@ -1,0 +1,31 @@
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  gate:
+    # Release quality gate: ruff + bandit (0 Medium+) + pytest, mirroring the
+    # base Industrial-AIOps repo. Energy protocol libs install on Linux for the
+    # mock-based unit tests (drivers are monkeypatched; no live gear needed).
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: install
+        run: |
+          python -m pip install --upgrade pip
+          # base package + energy protocol extras + dev tools
+          pip install -e ".[iec104,dnp3,dev]"
+          # iec61850 (linux-only wheel) — best effort; skipped if unavailable
+          pip install "pyiec61850>=1.5.2a1,<2" || echo "pyiec61850 unavailable; iec61850 unit tests use the lazy-import path"
+      - name: ruff
+        run: ruff check iaiops_energy tests
+      - name: bandit (0 Medium+)
+        run: bandit -q -r iaiops_energy --severity-level medium
+      - name: pytest
+        run: pytest -q
