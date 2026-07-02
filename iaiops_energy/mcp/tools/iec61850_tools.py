@@ -2,23 +2,25 @@
 
 Governed at risk_level='low'. Control blocks (Oper / select-before-operate) are
 intentionally NOT exposed in this preview. The libiec61850 binding is an OPTIONAL
-extra (``pip install iaiops[iec61850]``, needs libiec61850 built) imported lazily;
+extra (``pip install iaiops-energy[iec61850]``, linux-only wheel) imported lazily;
 when missing, every tool returns a teaching error dict. Preview — binding/API shape
 unverified against a live IED.
 """
 
+from typing import Optional
 
 from iaiops.core.governance import governed_tool
-from mcp_server._shared import _target, mcp, tool_errors
+from mcp_server._shared import _target, tool_errors
 
 from iaiops_energy.connectors.iec61850 import ops
+from iaiops_energy.mcp._app import mcp
 
 
 @mcp.tool()
 @governed_tool(risk_level="low")
 @tool_errors("dict")
 def iec61850_device_directory(
-    include_children: bool = False, endpoint: str | None = None
+    include_children: bool = False, endpoint: Optional[str] = None
 ) -> dict:
     """[READ][risk=low] List the IED's logical devices (optionally their children).
 
@@ -37,7 +39,7 @@ def iec61850_device_directory(
 @mcp.tool()
 @governed_tool(risk_level="low")
 @tool_errors("dict")
-def iec61850_browse(reference: str, endpoint: str | None = None) -> dict:
+def iec61850_browse(reference: str, endpoint: Optional[str] = None) -> dict:
     """[READ][risk=low] Browse immediate model children under a reference (LD/LN/DO).
 
     Args:
@@ -54,7 +56,9 @@ def iec61850_browse(reference: str, endpoint: str | None = None) -> dict:
 @mcp.tool()
 @governed_tool(risk_level="low")
 @tool_errors("dict")
-def iec61850_read(reference: str, fc: str = "MX", endpoint: str | None = None) -> dict:
+def iec61850_read(
+    reference: str, fc: str = "MX", endpoint: Optional[str] = None
+) -> dict:
     """[READ][risk=low] Read one data attribute by object-reference + functional constraint.
 
     Args:
