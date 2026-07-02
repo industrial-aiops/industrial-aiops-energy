@@ -1,4 +1,4 @@
-# industrial-aiops-energy v0.1.1
+# industrial-aiops-energy v0.1.2
 
 **Energy edition (变电 / 电力)** of [Industrial-AIOps](https://github.com/industrial-aiops/industrial-aiops)
 — read-only OT connectors for substation / utility telecontrol, built on top of
