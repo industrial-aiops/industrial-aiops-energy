@@ -1,1 +1,1 @@
-"""Energy MCP tool modules (register on the shared mcp_server instance)."""
+"""Energy MCP tool modules (register on the energy edition's own instance)."""

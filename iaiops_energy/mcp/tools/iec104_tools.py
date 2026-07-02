@@ -2,22 +2,24 @@
 
 All tools are governed at risk_level='low' (non-destructive monitor direction).
 Control-direction commands are intentionally NOT exposed in this preview. c104 is
-an OPTIONAL extra (``pip install iaiops[iec104]``) imported lazily; when missing,
-every tool returns a teaching error dict. Preview — binding/API shape unverified
-against a live RTU.
+an OPTIONAL extra (``pip install iaiops-energy[iec104]``) imported lazily; when
+missing, every tool returns a teaching error dict. Preview — binding/API shape
+unverified against a live RTU.
 """
 
+from typing import Optional
 
 from iaiops.core.governance import governed_tool
-from mcp_server._shared import _target, mcp, tool_errors
+from mcp_server._shared import _target, tool_errors
 
 from iaiops_energy.connectors.iec104 import ops
+from iaiops_energy.mcp._app import mcp
 
 
 @mcp.tool()
 @governed_tool(risk_level="low")
 @tool_errors("dict")
-def iec104_connection_info(endpoint: str | None = None) -> dict:
+def iec104_connection_info(endpoint: Optional[str] = None) -> dict:
     """[READ][risk=low] Connect and report IEC-104 link status + discovered stations.
 
     Args:
@@ -35,7 +37,7 @@ def iec104_connection_info(endpoint: str | None = None) -> dict:
 @governed_tool(risk_level="low")
 @tool_errors("dict")
 def iec104_interrogate(
-    common_address: int | None = None, endpoint: str | None = None
+    common_address: Optional[int] = None, endpoint: Optional[str] = None
 ) -> dict:
     """[READ][risk=low] General interrogation: all monitored points of a station (ASDU CA).
 
@@ -55,7 +57,9 @@ def iec104_interrogate(
 @governed_tool(risk_level="low")
 @tool_errors("dict")
 def iec104_read_point(
-    io_address: int, common_address: int | None = None, endpoint: str | None = None
+    io_address: int,
+    common_address: Optional[int] = None,
+    endpoint: Optional[str] = None,
 ) -> dict:
     """[READ][risk=low] Read one monitored point by information-object address (IOA).
 

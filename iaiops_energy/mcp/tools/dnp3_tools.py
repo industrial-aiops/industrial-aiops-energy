@@ -2,21 +2,24 @@
 
 Governed at risk_level='low' (monitor direction). Control (CROB / analog output)
 is intentionally NOT exposed in this preview. pydnp3/opendnp3 is an OPTIONAL extra
-(``pip install iaiops[dnp3]``) imported lazily; when missing, every tool returns a
-teaching error dict. Preview — binding/API shape unverified against a live outstation.
+(``pip install iaiops-energy[dnp3]``) imported lazily; when missing, every tool
+returns a teaching error dict. Preview — binding/API shape unverified against a
+live outstation.
 """
 
+from typing import Optional
 
 from iaiops.core.governance import governed_tool
-from mcp_server._shared import _target, mcp, tool_errors
+from mcp_server._shared import _target, tool_errors
 
 from iaiops_energy.connectors.dnp3 import ops
+from iaiops_energy.mcp._app import mcp
 
 
 @mcp.tool()
 @governed_tool(risk_level="low")
 @tool_errors("dict")
-def dnp3_link_status(endpoint: str | None = None) -> dict:
+def dnp3_link_status(endpoint: Optional[str] = None) -> dict:
     """[READ][risk=low] Bring the DNP3 master online and report link/outstation status.
 
     Args:
@@ -32,7 +35,7 @@ def dnp3_link_status(endpoint: str | None = None) -> dict:
 @mcp.tool()
 @governed_tool(risk_level="low")
 @tool_errors("dict")
-def dnp3_integrity_poll(endpoint: str | None = None) -> dict:
+def dnp3_integrity_poll(endpoint: Optional[str] = None) -> dict:
     """[READ][risk=low] Class 0/1/2/3 integrity poll → the outstation's database.
 
     Returns all static points grouped by measurement type (binary_input,
