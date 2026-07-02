@@ -11,7 +11,7 @@ from __future__ import annotations
 
 from iaiops.core.runtime import config as _config
 
-__version__ = "0.1.2"
+__version__ = "0.1.3"
 
 # Energy protocols this edition adds to the shared base, with their default
 # TCP/UDP ports (IEC-104 = 2404, DNP3 = 20000, IEC-61850 MMS = 102).

@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "iaiops-energy"
-version = "0.1.2"
+version = "0.1.3"
 description = "Energy edition (变电/电力) for Industrial-AIOps — IEC-104 / DNP3 / IEC-61850 read-only connectors on top of iaiops.core."
 readme = "README.md"
 requires-python = ">=3.11"
@@ -13,7 +13,7 @@ authors = [{ name = "wei", email = "zhouwei008@gmail.com" }]
 keywords = ["OT", "SCADA", "IEC-104", "DNP3", "IEC-61850", "substation", "energy", "AIOps"]
 # Depends on the base Industrial-AIOps package for the shared core (governance /
 # brain / runtime / normalized model) and the MCP server infra it registers onto.
-dependencies = ["iaiops>=0.7,<0.9"]
+dependencies = ["iaiops>=0.9,<1.0"]
 
 [project.optional-dependencies]
 # Protocol client libs — imported LAZILY so the package installs without them.
