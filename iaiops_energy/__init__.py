@@ -1,3 +1,37 @@
-"""industrial-aiops-energy — Energy edition connectors for Industrial-AIOps."""
+"""industrial-aiops-energy — Energy edition connectors for Industrial-AIOps.
+
+Importing this package registers the three energy protocols (IEC-104 / DNP3 /
+IEC-61850) with the shared base config so ``TargetConfig`` validation accepts
+them. The base package is protocol-neutral and ships without energy protocols;
+each edition extends the supported set at import time (a plugin-registration
+pattern — a NEW tuple/dict is bound, the base objects are never mutated in place).
+"""
+
+from __future__ import annotations
+
+from iaiops.core.runtime import config as _config
 
 __version__ = "0.1.1"
+
+# Energy protocols this edition adds to the shared base, with their default
+# TCP/UDP ports (IEC-104 = 2404, DNP3 = 20000, IEC-61850 MMS = 102).
+_ENERGY_PROTOCOLS: tuple[str, ...] = ("iec104", "dnp3", "iec61850")
+_ENERGY_DEFAULT_PORTS: dict[str, int] = {"iec104": 2404, "dnp3": 20000, "iec61850": 102}
+
+
+def _register_protocols() -> None:
+    """Extend the base config's supported protocols + default ports (idempotent).
+
+    Rebinds ``SUPPORTED_PROTOCOLS`` / ``_DEFAULT_PORTS`` to new objects rather than
+    mutating them, so re-import is safe and the base package stays immutable.
+    """
+    missing = tuple(p for p in _ENERGY_PROTOCOLS if p not in _config.SUPPORTED_PROTOCOLS)
+    if missing:
+        _config.SUPPORTED_PROTOCOLS = _config.SUPPORTED_PROTOCOLS + missing
+    if not _ENERGY_DEFAULT_PORTS.items() <= _config._DEFAULT_PORTS.items():
+        _config._DEFAULT_PORTS = {**_config._DEFAULT_PORTS, **_ENERGY_DEFAULT_PORTS}
+
+
+_register_protocols()
+
+__all__ = ["__version__"]

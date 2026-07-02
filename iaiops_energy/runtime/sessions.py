@@ -106,7 +106,7 @@ def _build_dnp3_client(target: TargetConfig) -> Any:
 
     return build_master_adapter(
         host=target.host, port=target.port or 20000,
-        outstation=target.unit_id, master=target.master_address or 1,
+        outstation=target.unit_id, master=getattr(target, "master_address", 0) or 1,
     )
 
 
