@@ -103,7 +103,10 @@ class _Pydnp3MasterAdapter:
         self._manager = None
         self._dnpmaster = None
         self._handler = _CollectingSOEHandler()
-        self._online = False
+        self._enabled = False
+        # Latest opendnp3 ChannelState delivered via OnStateChange (None until the
+        # first callback arrives); drives is_online() for a live link reading.
+        self._channel_state: Any = None
 
     def enable(self) -> None:
         """Open the channel + master and enable it (begins outstation link)."""
@@ -111,7 +114,7 @@ class _Pydnp3MasterAdapter:
         self._manager = a3.DNP3Manager(1)
         channel = self._manager.AddTCPClient(
             "iaiops", o3.levels.NORMAL, self._asiopal.ChannelRetry().Default(),
-            self._host, _ANY_LOCAL_ADAPTER, self._port, None,
+            self._host, _ANY_LOCAL_ADAPTER, self._port, self._make_channel_listener(),
         )
         stack = a3.MasterStackConfig()
         stack.link.LocalAddr = self._master
@@ -120,7 +123,7 @@ class _Pydnp3MasterAdapter:
             "master", self._make_soe(), o3.DefaultMasterApplication().Create(), stack,
         )
         self._dnpmaster.Enable()
-        self._online = True
+        self._enabled = True
 
     def _make_soe(self) -> Any:
         """Return the SOE handler the master feeds — our collector, so a poll harvests it.
@@ -132,11 +135,47 @@ class _Pydnp3MasterAdapter:
         """
         return self._handler
 
+    def _make_channel_listener(self) -> Any:
+        """Build an opendnp3 ``IChannelListener`` that records live channel state.
+
+        opendnp3 invokes ``OnStateChange(ChannelState)`` on the reactor thread as
+        the TCP channel opens / closes; recording it lets :meth:`is_online` reflect
+        the real link rather than merely that :meth:`enable` ran. 待核实: against the
+        real pydnp3 binding the listener may need to subclass a specific C++ base —
+        we subclass ``asiodnp3.IChannelListener`` when present and fall back to a
+        plain object so the module stays importable / mock-testable without pydnp3.
+        """
+        base = getattr(self._asiodnp3, "IChannelListener", object)
+        record = self._record_channel_state
+
+        class _ChannelListener(base):  # type: ignore[misc, valid-type]
+            def OnStateChange(self, state: Any) -> None:  # noqa: N802 — opendnp3 name
+                record(state)
+
+        return _ChannelListener()
+
+    def _record_channel_state(self, state: Any) -> None:
+        """Store the latest opendnp3 ChannelState (fed by the channel listener)."""
+        self._channel_state = state
+
+    def _channel_is_open(self) -> bool:
+        """True when the recorded channel state is opendnp3 ``ChannelState.OPEN``."""
+        open_state = getattr(getattr(self._opendnp3, "ChannelState", None), "OPEN", "OPEN")
+        return self._channel_state == open_state
+
     def is_online(self) -> bool:
-        # 待核实: reflects "enable() succeeded", not the live link state — true
-        # link-up detection needs an OnStateChange / LinkStatusListener callback,
-        # which is binding-specific and unverified here.
-        return self._online
+        """Report the live link state from opendnp3's channel callbacks.
+
+        Once OnStateChange has delivered any ChannelState, reflect it (online ==
+        channel OPEN). Before the first callback — or with a binding whose listener
+        never fires — fall back to the enable() latch so behaviour never regresses
+        below "enable() succeeded". 待核实: master link-layer status
+        (IMasterApplication.OnStateChange / LinkStatus) is a deeper, unverified
+        signal not yet wired; channel state is the verified one.
+        """
+        if self._channel_state is not None:
+            return self._channel_is_open()
+        return self._enabled
 
     def integrity_poll(self, settle_s: float = 2.0) -> list[dict]:
         """Run a Class 0/1/2/3 integrity scan and return the collected points.
@@ -159,7 +198,8 @@ class _Pydnp3MasterAdapter:
         return list(self._handler.points)
 
     def shutdown(self) -> None:
-        self._online = False
+        self._enabled = False
+        self._channel_state = None
         if self._manager is not None:
             try:
                 self._manager.Shutdown()

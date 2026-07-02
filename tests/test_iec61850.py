@@ -9,10 +9,10 @@ device directory, browse, and attribute read without a live IED.
 from __future__ import annotations
 
 import pytest
-from iaiops.core.runtime.config import TargetConfig
 
 import iaiops_energy.runtime.sessions as conn
 from iaiops_energy.connectors.iec61850 import ops
+from iaiops_energy.runtime.targets import EnergyTarget as TargetConfig
 
 
 class _FakeAdapter:

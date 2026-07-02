@@ -9,12 +9,14 @@ driver's group→type mapping.
 
 from __future__ import annotations
 
+import types
+
 import pytest
-from iaiops.core.runtime.config import TargetConfig
 
 import iaiops_energy.runtime.sessions as conn
 from iaiops_energy.connectors.dnp3 import ops
-from iaiops_energy.connectors.dnp3.driver import measurement_type
+from iaiops_energy.connectors.dnp3.driver import _Pydnp3MasterAdapter, measurement_type
+from iaiops_energy.runtime.targets import EnergyTarget as TargetConfig
 
 
 class _FakeAdapter:
@@ -108,3 +110,47 @@ def test_wrong_protocol_guarded():
     with pytest.raises(conn.OTConnectionError, match="not dnp3"):
         with conn.dnp3_session(target):
             pass
+
+
+def _adapter_with_fake_opendnp3():
+    """Build the REAL adapter with fake opendnp3 modules (no pydnp3 needed)."""
+    opendnp3 = types.SimpleNamespace(
+        ChannelState=types.SimpleNamespace(OPEN="OPEN", CLOSED="CLOSED"),
+    )
+    return _Pydnp3MasterAdapter(
+        asiodnp3=types.SimpleNamespace(), opendnp3=opendnp3,
+        asiopal=types.SimpleNamespace(), openpal=types.SimpleNamespace(),
+        host="10.0.0.6", port=20000, outstation=4, master=1,
+    ), opendnp3
+
+
+@pytest.mark.unit
+def test_is_online_reflects_channel_state_change():
+    """is_online() tracks live opendnp3 channel state, not just enable()."""
+    adapter, o3 = _adapter_with_fake_opendnp3()
+    # No callback yet, not enabled → offline (the enable() latch is False).
+    assert adapter.is_online() is False
+    # opendnp3 reports the channel OPEN → is_online flips True.
+    adapter._record_channel_state(o3.ChannelState.OPEN)
+    assert adapter.is_online() is True
+    # Channel drops (CLOSED) → is_online reflects it immediately.
+    adapter._record_channel_state(o3.ChannelState.CLOSED)
+    assert adapter.is_online() is False
+
+
+@pytest.mark.unit
+def test_channel_listener_forwards_state_to_is_online():
+    """The IChannelListener built for opendnp3 feeds OnStateChange into is_online()."""
+    adapter, o3 = _adapter_with_fake_opendnp3()
+    listener = adapter._make_channel_listener()
+    listener.OnStateChange(o3.ChannelState.OPEN)
+    assert adapter.is_online() is True
+
+
+@pytest.mark.unit
+def test_is_online_falls_back_to_enable_latch_before_callback():
+    """Before any channel callback, is_online() honours the enable() latch."""
+    adapter, _ = _adapter_with_fake_opendnp3()
+    assert adapter.is_online() is False
+    adapter._enabled = True  # simulate enable() having run, no callback yet
+    assert adapter.is_online() is True
