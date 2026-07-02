@@ -31,6 +31,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **Edition skill** (`skills/iaiops-energy/SKILL.md`): agent-facing routing +
+  usage guide for the energy server — trigger-rich description (IEC-104 / DNP3 /
+  IEC 61850 MMS / substation / RTU / IED / 遥测遥信; GOOSE/SV explicitly out of
+  scope), the 8 monitor-only protocol tools, mounted base-brain note, honest
+  support-version matrix (lib pins + 待核实 status), doctor-first workflow, and
+  a redirect of factory/building/process protocols to the base `iaiops` server;
+  anti-drift test `tests/test_skill_sync.py` pins the skill to the registered
+  tool surface and to pyproject's protocol-lib pins.
 - **Startup governance assertion**: the server refuses to start if any
   registered tool callable lacks the `_is_governed_tool` harness marker
   (defense-in-depth so a future unguarded tool cannot ship).
