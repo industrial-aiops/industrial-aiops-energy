@@ -1,3 +1,5 @@
+<!-- mcp-name: io.github.industrial-aiops/iaiops-energy -->
+
 # industrial-aiops-energy — 能源 edition (变电 / 电力)
 
 The **energy edition** of [Industrial-AIOps](https://github.com/industrial-aiops/industrial-aiops),

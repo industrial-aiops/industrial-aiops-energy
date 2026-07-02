@@ -1,0 +1,21 @@
+{
+  "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
+  "name": "io.github.industrial-aiops/iaiops-energy",
+  "title": "OT AIops — Energy edition",
+  "description": "Energy edition (变电/电力) for Industrial-AIOps: IEC-104 / DNP3 / IEC-61850 read-only connectors on iaiops.core. Governed, read-first.",
+  "repository": {
+    "url": "https://github.com/industrial-aiops/industrial-aiops-energy",
+    "source": "github"
+  },
+  "version": "0.1.1",
+  "packages": [
+    {
+      "registryType": "pypi",
+      "identifier": "iaiops-energy",
+      "version": "0.1.1",
+      "transport": {
+        "type": "stdio"
+      }
+    }
+  ]
+}
