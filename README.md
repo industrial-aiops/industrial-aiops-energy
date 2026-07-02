@@ -43,11 +43,22 @@ Point a target at your substation gear in `~/.iaiops/config.yaml`
 
 ## Validation status (honest)
 
-The connectors are **preview (`待核实`)** against live gear — the same honesty ladder
-as the base repo. Driver **codec / API surface** is verified against the real
-libraries; the mock/monkeypatched **unit tests run in CI** without hardware. **Live
-RTU / IED reads are not yet hardware-verified** (no gear in CI). See the base repo's
-`docs/PREVIEW-VERIFICATION.md` runbook for how to promote a protocol to verified.
+The same honesty ladder as the base repo. Driver **codec / API surface** is verified
+against the real libraries; the mock/monkeypatched **unit tests run in CI** without
+hardware. See the base repo's `docs/PREVIEW-VERIFICATION.md` runbook for how a
+protocol is promoted.
+
+| Protocol | Status | Evidence |
+| --- | --- | --- |
+| **DNP3 / IEEE 1815** | **verified (monitor path)** | Real master↔outstation round-trip against a live **opendnp3** outstation (`pydnp3`): `is_online()` reflects the real channel `OnStateChange`, and `integrity_poll()` (Class 0/1/2/3) returns the seeded binary/analog/counter database grouped by type. See `tests/test_dnp3_live.py` (`@pytest.mark.integration`, skips when `pydnp3` is absent). No physical RTU. |
+| IEC 60870-5-104 | preview (`待核实`) | Not yet live-verified (no gear / simulator in CI). |
+| IEC 61850 (MMS) | preview (`待核实`) | Not yet live-verified (no gear / simulator in CI). |
+
+DNP3 notes: read-only / monitor direction only (no control). `pydnp3` 0.1.0 ships no
+wheel and needs a native opendnp3 build, so the live test runs in a Linux container;
+its `DNP3Manager.Shutdown()` can block in a long-lived interpreter, so the connector
+bounds teardown (`_Pydnp3MasterAdapter.shutdown`) and the test drives the round-trip
+in a short-lived child process.
 
 ## License
 
