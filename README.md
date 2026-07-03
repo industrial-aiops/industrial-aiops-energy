@@ -16,6 +16,29 @@ normalized ISA-95/18.2 model), and MCP server infrastructure — this repo only 
 the three energy connectors + their session builders + MCP tools. Read-first: no
 control-direction writes are exposed.
 
+Current release: **0.1.3** (requires `iaiops>=0.9,<1.0`). Since 0.1.3 the server has
+its **own MCP identity** — `iaiops-energy-mcp` runs a dedicated `FastMCP("iaiops-energy")`
+instance with energy-specific instructions (IEC-104 / DNP3 / IEC-61850, read-first,
+no control/operate), with the base cross-protocol brain tools mirrored onto it — plus
+an **edition skill** (`skills/iaiops-energy/SKILL.md`, anti-drift-tested against the
+registered tool surface) and **protocol-consistency contract tests** (every tool must
+carry the governance marker, a `[READ]`-style risk tag, an `Args:` section, and the
+canonical `{error, hint}` error shape; the server refuses to start if any registered
+tool lacks the governance marker).
+
+## 🧪 测试与共创 / Beta testing & co-creation
+
+**变电站现场的测试反馈是这个包最缺的东西。** DNP3 与 IEC-61850 的监视路径已对真实库
+(opendnp3 outstation / libiec61850 MMS server)loopback 验证,但 **真实 RTU / IED /
+IEC-104 子站一律 `待核实`** —— 如果你能在授权的测试环境里对真实变电设备跑一遍
+`iaiops doctor`,我们非常想听结果。经你验证的设备会署名写进支持矩阵。
+
+**Live substation RTU / IED / IEC-104 field testing is what this package needs most.**
+The DNP3 and IEC-61850 monitor paths are library-loopback-verified, but real gear stays
+`待核实`. Report results (protocol + device model + `iaiops doctor` output) via the base
+repo's pinned issue:
+👉 [industrial-aiops#28 — Call for field-testing partners (v0.10.0)](https://github.com/industrial-aiops/industrial-aiops/issues/28)
+
 ## Why a separate repo
 
 Energy targets a distinct buyer (utilities / substations), has heavier
