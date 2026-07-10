@@ -10,7 +10,12 @@ readme = "README.md"
 requires-python = ">=3.11"
 license = "MIT"
 authors = [{ name = "wei", email = "zhouwei008@gmail.com" }]
-keywords = ["OT", "SCADA", "IEC-104", "DNP3", "IEC-61850", "substation", "energy", "AIOps"]
+keywords = [
+    "OT", "SCADA", "IEC-104", "DNP3", "IEC-61850", "substation", "energy", "AIOps",
+    # Edge / ecosystem — governed, neutral edge application (Margo alignment is roadmap; see the
+    # base repo's docs/MARGO-ALIGNMENT.md — NOT compliant yet).
+    "edge", "iiot", "edge-computing", "margo", "edge-interoperability",
+]
 # Depends on the base Industrial-AIOps package for the shared core (governance /
 # brain / runtime / normalized model) and the MCP server infra it registers onto.
 dependencies = ["iaiops>=0.9,<1.0"]
