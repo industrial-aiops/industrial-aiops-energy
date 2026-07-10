@@ -1,0 +1,26 @@
+# Example hardened run of the iaiops-energy edge-application container (Podman/Docker).
+#   docker compose -f deploy/margo/compose.yaml up
+services:
+  iaiops-energy:
+    build:
+      context: ../..
+      dockerfile: deploy/margo/Dockerfile
+    image: iaiops-energy:latest
+    read_only: true
+    tmpfs: ["/tmp"]
+    cap_drop: ["ALL"]
+    security_opt: ["no-new-privileges:true"]
+    user: "10001:10001"
+    # NO inbound ports — outbound-only to the substation RTUs/IEDs in your config.yaml.
+    environment:
+      IAIOPS_MASTER_PASSWORD: "${IAIOPS_MASTER_PASSWORD:?set in the host secret store}"
+    volumes:
+      - iaiops-energy-state:/home/iaiops/.iaiops
+    restart: unless-stopped
+
+volumes:
+  iaiops-energy-state:
+
+# First-time setup (writes into the volume), then run:
+#   docker compose -f deploy/margo/compose.yaml run --rm iaiops-energy iaiops init
+#   docker compose -f deploy/margo/compose.yaml run --rm iaiops-energy iaiops doctor

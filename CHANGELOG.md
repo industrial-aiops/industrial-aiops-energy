@@ -5,6 +5,17 @@ All notable changes to `iaiops-energy` are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added — edge-native / Margo ecosystem alignment (docs + packaging skeleton)
+
+- Mirrors the base repo's Margo positioning: `deploy/margo/` container + `margo.org/v1-alpha1`
+  application-description skeleton (`Dockerfile` running `iaiops-energy-mcp`, hardened `compose.yaml`,
+  `margo.yaml`); README "edge-native / Margo" subsection; `pyproject` keywords
+  `+= edge/iiot/edge-computing/margo/edge-interoperability`.
+- **Honesty:** NOT Margo-compliant yet — image build, hosted+signed package, and a conformance
+  result are roadmap `⏳`. Every unconfirmed field marked `待核实`.
+
 ## [0.1.3] — 2026-07-02
 
 ### Fixed

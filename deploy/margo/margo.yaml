@@ -1,0 +1,70 @@
+# Margo ApplicationDescription for iaiops-energy — built to the real margo.org/v1-alpha1 schema
+# (docs.margo.org, PR1 pre-draft). Mirrors the base repo's deploy/margo/margo.yaml. Remaining
+# `待核实`: hosted+signed packageLocation/keyLocation, secret-parameter flag (app-package-definition-wg
+# question), and IEC-61850 native-lib needs. NOT conformance-tested → not Margo-compliant.
+apiVersion: margo.org/v1-alpha1
+kind: ApplicationDescription
+id: io-github-industrial-aiops-iaiops-energy
+metadata:
+  name: Industrial-AIOps — Energy edition
+  description: >-
+    Read-only OT tap for substation / utility telecontrol — IEC 60870-5-104, DNP3, IEC 61850 MMS —
+    on top of iaiops.core (governance / cross-protocol RCA brain), exposed as governed MCP tools.
+  version: "0.1.3"
+  catalog:
+    application:
+      tagline: Governed substation/utility read tap (IEC-104 / DNP3 / IEC-61850)
+      site: https://github.com/industrial-aiops/industrial-aiops-energy
+      tags: ["ot", "energy", "substation", "iec-104", "dnp3", "iec-61850", "mcp", "read-only"]
+    author:
+      - name: wei
+        email: zhouwei008@gmail.com
+    organization:
+      - name: Industrial-AIOps (independent)
+        site: https://github.com/industrial-aiops
+
+deploymentProfiles:
+  - type: compose
+    id: iaiops-energy-compose
+    description: >-
+      Single hardened, non-root container running the energy MCP server (brain + IEC-104 / DNP3 /
+      IEC-61850 tools); read-only rootfs, outbound-only to the substation RTUs/IEDs, no inbound ports.
+    components:
+      - name: iaiops-energy
+        properties:
+          packageLocation: 待核实   # URL to the signed compose.tar.gz (needs a host/registry)
+          keyLocation: 待核实       # URL to the signing public key
+          wait: true
+          timeout: "5m00s"
+    requiredResources:
+      cpu:
+        cores: 0.5
+        architectures: [amd64, arm64]   # 待核实: IEC-61850 wheel availability per arch
+      memory: 512Mi
+      storage: 1Gi
+      interfaces:
+        - type: ethernet
+
+parameters:
+  masterPassword:
+    value: ""
+    targets:
+      - pointer: IAIOPS_MASTER_PASSWORD   # compose → environment variable
+        components: [iaiops-energy]
+
+configuration:
+  sections:
+    - name: Access
+      settings:
+        - parameter: masterPassword
+          name: Secret-store master password
+          description: >-
+            Unlocks the encrypted on-box secret store. 待核实: the spec has no secret-typed
+            parameter yet (shared app-package-definition-wg question).
+          immutable: false
+          schema: passwordSchema
+  schema:
+    - name: passwordSchema
+      dataType: string
+      minLength: 8
+      allowEmpty: false
