@@ -64,6 +64,19 @@ iaiops-energy-mcp                       # brain + energy tools over stdio
 Point a target at your substation gear in `~/.iaiops/config.yaml`
 (`protocol: iec104|dnp3|iec61850`, `host`, `port`, `common_address` / `unit_id`).
 
+## Edge deployment & ecosystem (edge-native / Margo)
+
+Like the base package, the energy edition rides on a hardened, centrally-managed **edge host** as a
+portable, governed **edge application** — mapping onto the [Margo](https://margo.org/)
+edge-interoperability roles (immutable host · compliant orchestrator · **iaiops-energy = the
+OT-domain app**), deployable as an OCI **Managed Container** (outbound-only to substation RTUs/IEDs,
+no inbound). A container + `margo.org/v1-alpha1` application-description skeleton is in
+[`deploy/margo/`](deploy/margo/); the full alignment + honest gap analysis lives in the base repo's
+[`docs/MARGO-ALIGNMENT.md`](https://github.com/industrial-aiops/industrial-aiops/blob/main/docs/MARGO-ALIGNMENT.md).
+> **Honest status:** a natural Margo edge application, but **NOT Margo-compliant yet** — image build,
+> hosted+signed package, and a published conformance result are roadmap `⏳`. No claim of compliance
+> until that result exists.
+
 ## Validation status (honest)
 
 The same honesty ladder as the base repo. Driver **codec / API surface** is verified
