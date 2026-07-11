@@ -19,8 +19,13 @@ jobs:
       - name: install
         run: |
           python -m pip install --upgrade pip
-          # base package + energy protocol extras + dev tools
-          pip install -e ".[iec104,dnp3,dev]"
+          # base package + IEC-104 + dev tools (these install cleanly from wheels)
+          pip install -e ".[iec104,dev]"
+          # dnp3 (pydnp3) — best effort: no wheel, needs a native opendnp3 source build that
+          # fails on hosted runners; pydnp3 is imported LAZILY and the dnp3 unit tests monkeypatch
+          # the client (test_dnp3.py), while test_dnp3_live.py skips cleanly when it's absent — so
+          # coverage is unchanged. (Base roadmap: "DNP3 not yet CI-verifiable".)
+          pip install "pydnp3>=0.1,<1" || echo "pydnp3 unavailable (native build); dnp3 unit tests use mocks, live test skips"
           # iec61850 (linux-only wheel) — best effort; skipped if unavailable
           pip install "pyiec61850>=1.5.2a1,<2" || echo "pyiec61850 unavailable; iec61850 unit tests use the lazy-import path"
       - name: ruff
