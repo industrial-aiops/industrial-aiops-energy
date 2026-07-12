@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added — substation intelligence (SOE protection-trip analysis)
+
+- **`substation_event_analysis` MCP tool** + `iaiops_energy/analysis/substation.py`:
+  a pure, read-only Sequence-of-Events analysis that reasons over INJECTED events
+  (relay pickups/trips, breaker open/close, lockouts, bus undervoltage) and returns
+  a coordination `verdict` — `selective_trip` / `backup_operation` / `breaker_failure`
+  / `insufficient` — with cite-first detail (every claim tied to a timestamped event).
+  No live protocol I/O and no `endpoint`: an agent harvests the SOE and feeds it in.
+  Monitor-only by design (governed at `risk=low`); tolerant timestamp parsing
+  (trailing `Z`, mixed tz) and free-text `label` keyword inference; all output lists
+  bounded. Registered in `ENERGY_TOOL_MODULES`, documented in the edition skill.
+
 ### Added — edge-native / Margo ecosystem alignment (docs + packaging skeleton)
 
 - Mirrors the base repo's Margo positioning: `deploy/margo/` container + `margo.org/v1-alpha1`

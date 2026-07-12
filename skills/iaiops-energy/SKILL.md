@@ -113,6 +113,15 @@ config; omitted, the sole/default target of the protocol is used.
 - `iec61850_read` — read one data attribute by object reference + functional
   constraint (e.g. `LD0/MMXU1.TotW.mag.f`, FC `MX`)
 
+### Substation intelligence (pure analysis — no live I/O)
+- `substation_event_analysis` — Sequence-of-Events (SOE) protection-trip /
+  selectivity analysis: feed injected relay pickups/trips + breaker open/close +
+  lockouts (`{ref, timestamp, type}`) and it decides what tripped and whether
+  protection coordinated — selective trip vs non-selective backup operation vs
+  breaker failure, cite-first, monitor-only（变电事件序列/保护选择性分析：判定
+  跳闸与保护配合是否正确——选择性跳闸/后备越级动作/断路器失灵；纯分析、只读，
+  不做任何 live I/O）
+
 ### Cross-protocol brain (mounted from the base `iaiops` package)
 The base brain tools register onto this server too — diagnostics
 (`diagnose_dataflow`, `alarm_bad_actors`, `tag_health`, `historian_health`,
