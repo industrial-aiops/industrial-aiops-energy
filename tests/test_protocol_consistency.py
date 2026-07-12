@@ -158,7 +158,10 @@ def test_every_energy_tool_error_response_has_error_and_hint(monkeypatch) -> Non
         def _boom(_name: Any = None) -> Any:
             raise ValueError("contract-test forced failure")
 
-        monkeypatch.setattr(module, "_target", _boom)
+        # Pure-analysis modules (e.g. substation_tools) resolve no endpoint and
+        # have no ``_target`` to force-fail; only the protocol tools do.
+        if hasattr(module, "_target"):
+            monkeypatch.setattr(module, "_target", _boom)
 
     for name, tool in _energy_tools().items():
         kwargs = {
