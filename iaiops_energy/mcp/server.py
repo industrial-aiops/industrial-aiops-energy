@@ -23,8 +23,14 @@ from mcp_server.profiles import BRAIN_MODULES
 
 from iaiops_energy.mcp._app import mcp
 
-# The energy edition's protocol tool modules (this package).
-ENERGY_TOOL_MODULES: tuple[str, ...] = ("iec104_tools", "dnp3_tools", "iec61850_tools")
+# The energy edition's protocol tool modules (this package). ``substation_tools``
+# is a pure, monitor-only SOE analysis tool (no live protocol I/O / no endpoint).
+ENERGY_TOOL_MODULES: tuple[str, ...] = (
+    "iec104_tools",
+    "dnp3_tools",
+    "iec61850_tools",
+    "substation_tools",
+)
 
 
 def _mount_base_brain_tools() -> None:
