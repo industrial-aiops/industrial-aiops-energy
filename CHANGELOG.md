@@ -7,6 +7,32 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added — IEC-104 live round-trip scaffolding (NOT yet promoted)
+
+- **`tests/iec104_server_harness.py` + `tests/test_iec104_live.py`**
+  (`@pytest.mark.integration`): an in-process **real `c104` IEC-104 server**
+  seeded with a measured value (`M_ME_NC_1` @ IOA 1001 = 50.0) and a single point
+  (`M_SP_NA_1` @ IOA 1002) on ASDU common address 47, plus a live test that drives
+  the connector's `iec104_connection_info` → `iec104_interrogate` →
+  `iec104_read_point` against it over the real TCP/2404 profile in a short-lived
+  child process (mirrors the DNP3 / IEC-61850 live tests). Asserts the seeded
+  points round-trip with correct values/quality, that a bad IOA returns
+  `found=False` with **no fabricated value**, and — via server-side ASDU-TypeID
+  capture — that **no control command (C_SC / C_DC / C_SE …) is ever issued**
+  (only C_IC general interrogation). Skips cleanly when `c104` is absent.
+- **Connector monitor-path fixes** (needed for the read to work against a real
+  RTU/server): `_build_iec104_client` now registers `on_new_station` /
+  `on_new_point` auto-discovery callbacks (the documented c104 client pattern, so
+  a general interrogation populates the client model), and the IEC-104 ops issue a
+  best-effort general interrogation (`C_IC` / Class 0) before reading. Monitor
+  direction only — no control point is ever created client-side.
+- **Honesty:** `c104` ships no wheel for macOS and its 2.2.1 sdist fails to compile
+  under Apple Clang in the dev env, so the live test currently **SKIPS locally** —
+  the round-trip has **not** been executed here. IEC 60870-5-104 therefore stays
+  **`preview (待核实)`** in the README/skill matrix; it is promoted to
+  `verified (monitor path)` only once this test genuinely runs and passes against a
+  real `c104` server (Linux/CI where the binding builds).
+
 ### Added — substation intelligence (SOE protection-trip analysis)
 
 - **`substation_event_analysis` MCP tool** + `iaiops_energy/analysis/substation.py`:
