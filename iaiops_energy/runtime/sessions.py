@@ -69,8 +69,10 @@ def _register_iec104_discovery(client: Any) -> None:
             connection.add_station(common_address=common_address)
 
         _add_station.__annotations__ = {
-            "client": c104.Client, "connection": c104.Connection,
-            "common_address": int, "return": None,
+            "client": c104.Client,
+            "connection": c104.Connection,
+            "common_address": int,
+            "return": None,
         }
         on_new_station(callable=_add_station)
 
@@ -80,8 +82,11 @@ def _register_iec104_discovery(client: Any) -> None:
             station.add_point(io_address=io_address, type=point_type)
 
         _add_point.__annotations__ = {
-            "client": c104.Client, "station": c104.Station,
-            "io_address": int, "point_type": c104.Type, "return": None,
+            "client": c104.Client,
+            "station": c104.Station,
+            "io_address": int,
+            "point_type": c104.Type,
+            "return": None,
         }
         on_new_point(callable=_add_point)
 
@@ -92,7 +97,8 @@ def iec104_session(target: TargetConfig, *, timeout_s: float = 10.0) -> Iterator
     if target.protocol != "iec104":
         raise OTConnectionError(
             f"Endpoint '{target.name}' is protocol '{target.protocol}', not iec104.",
-            endpoint=target.name, protocol=target.protocol,
+            endpoint=target.name,
+            protocol=target.protocol,
         )
     # Build INSIDE the try so a 待核实 library/I-O failure in add_connection is
     # translated (not a raw traceback) and the client is always stopped.
@@ -104,7 +110,8 @@ def iec104_session(target: TargetConfig, *, timeout_s: float = 10.0) -> Iterator
             raise OTConnectionError(
                 f"IEC-104 '{target.name}' ({target.host}:{target.port or 2404}) did not "
                 f"connect within {timeout_s}s (RTU offline / wrong CA / firewall).",
-                endpoint=target.host, protocol="iec104",
+                endpoint=target.host,
+                protocol="iec104",
             )
         yield client, conn
     except OTConnectionError:
@@ -134,19 +141,23 @@ def _build_dnp3_client(target: TargetConfig) -> Any:
         raise OTConnectionError(
             "The 'pydnp3' package is not installed. DNP3 is an OPTIONAL extra: "
             "'pip install iaiops-energy[dnp3]'.",
-            endpoint=target.name, protocol="dnp3",
+            endpoint=target.name,
+            protocol="dnp3",
         ) from exc
     if not target.host:
         raise OTConnectionError(
             f"DNP3 endpoint '{target.name}' has no host. Add 'host: <ip>' (and "
             f"'unit_id:' = outstation address, 'master_address:') to its config.",
-            endpoint=target.name, protocol="dnp3",
+            endpoint=target.name,
+            protocol="dnp3",
         )
     from iaiops_energy.connectors.dnp3.driver import build_master_adapter
 
     return build_master_adapter(
-        host=target.host, port=target.port or 20000,
-        outstation=target.unit_id, master=getattr(target, "master_address", 0) or 1,
+        host=target.host,
+        port=target.port or 20000,
+        outstation=target.unit_id,
+        master=getattr(target, "master_address", 0) or 1,
     )
 
 
@@ -156,7 +167,8 @@ def dnp3_session(target: TargetConfig, *, timeout_s: float = 10.0) -> Iterator[A
     if target.protocol != "dnp3":
         raise OTConnectionError(
             f"Endpoint '{target.name}' is protocol '{target.protocol}', not dnp3.",
-            endpoint=target.name, protocol=target.protocol,
+            endpoint=target.name,
+            protocol=target.protocol,
         )
     adapter = _build_dnp3_client(target)
     try:
@@ -165,7 +177,8 @@ def dnp3_session(target: TargetConfig, *, timeout_s: float = 10.0) -> Iterator[A
             raise OTConnectionError(
                 f"DNP3 '{target.name}' ({target.host}:{target.port or 20000}) did not "
                 f"come online within {timeout_s}s (outstation offline / wrong addr).",
-                endpoint=target.host, protocol="dnp3",
+                endpoint=target.host,
+                protocol="dnp3",
             )
         yield adapter
     except OTConnectionError:
@@ -195,13 +208,15 @@ def _build_iec61850_client(target: TargetConfig) -> Any:
             "The 'pyiec61850' (libiec61850 SWIG) binding is not installed. IEC 61850 "
             "is an OPTIONAL extra: 'pip install iaiops-energy[iec61850]' (linux-only "
             "wheel).",
-            endpoint=target.name, protocol="iec61850",
+            endpoint=target.name,
+            protocol="iec61850",
         ) from exc
     if not target.host:
         raise OTConnectionError(
             f"IEC-61850 endpoint '{target.name}' has no host. Add 'host: <ip>' (MMS "
             f"port defaults to 102) to its config entry.",
-            endpoint=target.name, protocol="iec61850",
+            endpoint=target.name,
+            protocol="iec61850",
         )
     from iaiops_energy.connectors.iec61850.driver import build_mms_adapter
 
@@ -219,7 +234,8 @@ def iec61850_session(target: TargetConfig, *, timeout_s: float = 10.0) -> Iterat
     if target.protocol != "iec61850":
         raise OTConnectionError(
             f"Endpoint '{target.name}' is protocol '{target.protocol}', not iec61850.",
-            endpoint=target.name, protocol=target.protocol,
+            endpoint=target.name,
+            protocol=target.protocol,
         )
     adapter = _build_iec61850_client(target)
     try:
@@ -264,5 +280,6 @@ def _translate_energy(
         f"{protocol.upper()} operation on '{target.name}' ({where}) failed: {detail}. "
         f"Check host/port/addressing and that the device is reachable. Preview — "
         f"validate against a real RTU/IED or a protocol simulator.",
-        endpoint=where, protocol=protocol,
+        endpoint=where,
+        protocol=protocol,
     )

@@ -60,9 +60,7 @@ def _all_tools() -> dict[str, Any]:
 
 def _energy_tools() -> dict[str, Any]:
     return {
-        name: tool
-        for name, tool in _all_tools().items()
-        if name.startswith(ENERGY_TOOL_PREFIXES)
+        name: tool for name, tool in _all_tools().items() if name.startswith(ENERGY_TOOL_PREFIXES)
     }
 
 
@@ -151,9 +149,7 @@ def test_every_energy_tool_signature_avoids_pep604_optionals() -> None:
 def test_every_energy_tool_error_response_has_error_and_hint(monkeypatch) -> None:
     """Failures must return the canonical {error, hint} teaching shape."""
     for module_name in energy_server.ENERGY_TOOL_MODULES:
-        module = __import__(
-            f"iaiops_energy.mcp.tools.{module_name}", fromlist=[module_name]
-        )
+        module = __import__(f"iaiops_energy.mcp.tools.{module_name}", fromlist=[module_name])
 
         def _boom(_name: Any = None) -> Any:
             raise ValueError("contract-test forced failure")
@@ -172,7 +168,6 @@ def test_every_energy_tool_error_response_has_error_and_hint(monkeypatch) -> Non
         result = tool.fn(**kwargs)
         assert isinstance(result, dict), f"{name} error response is not a dict"
         assert "error" in result and "hint" in result, (
-            f"{name} error response must follow the {{error, hint}} shape, got "
-            f"{sorted(result)}"
+            f"{name} error response must follow the {{error, hint}} shape, got {sorted(result)}"
         )
         assert "contract-test forced failure" in result["error"]

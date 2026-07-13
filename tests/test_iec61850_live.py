@@ -37,7 +37,7 @@ pytestmark = pytest.mark.skipif(
 # Child script: start a real MMS server, then verify the connector's read path
 # against it. Exits 0 and prints LIVE_OK only when the model + seeded value
 # round-trip. Kept as a string so the parent runs it in a fresh interpreter.
-_CHILD_SCRIPT = r'''
+_CHILD_SCRIPT = r"""
 import os, sys
 
 from tests.iec61850_server_harness import (
@@ -89,7 +89,7 @@ def main():
 
 
 main()
-'''
+"""
 
 
 @pytest.mark.integration

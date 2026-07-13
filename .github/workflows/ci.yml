@@ -30,6 +30,8 @@ jobs:
           pip install "pyiec61850>=1.5.2a1,<2" || echo "pyiec61850 unavailable; iec61850 unit tests use the lazy-import path"
       - name: ruff
         run: ruff check iaiops_energy tests
+      - name: ruff format (check)
+        run: ruff format --check iaiops_energy tests
       - name: bandit (0 Medium+)
         run: bandit -q -r iaiops_energy --severity-level medium
       - name: pytest

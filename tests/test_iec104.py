@@ -53,10 +53,13 @@ class _Client:
 
 @pytest.fixture
 def rtu(monkeypatch):
-    station = _Station(1, [
-        _Point(1001, "M_ME_NC_1", 50.0),
-        _Point(1002, "M_SP_NA_1", 1),
-    ])
+    station = _Station(
+        1,
+        [
+            _Point(1001, "M_ME_NC_1", 50.0),
+            _Point(1002, "M_SP_NA_1", 1),
+        ],
+    )
     conn_obj = _Conn([station])
     client = _Client(conn_obj)
     monkeypatch.setattr(conn, "_build_iec104_client", lambda target: (client, conn_obj))
@@ -127,8 +130,7 @@ def test_construction_error_is_translated(monkeypatch):
 @pytest.mark.unit
 def test_enum_name_zero_flag_not_rendered_as_bare_int():
     """A Quality good state (enum member, value 0, name None) must not read as '0'."""
-    good = type("Quality", (), {"name": None, "value": 0,
-                                "__str__": lambda self: "Quality.GOOD"})()
+    good = type("Quality", (), {"name": None, "value": 0, "__str__": lambda self: "Quality.GOOD"})()
     assert ops._enum_name(good) == "Quality.GOOD"
     # A named enum still renders its symbolic name.
     named = type("Q", (), {"name": "INVALID", "value": 4})()
@@ -178,12 +180,17 @@ def test_register_iec104_discovery_sets_real_annotations(monkeypatch):
     assert all(not isinstance(v, str) for v in st_ann.values())
     assert all(not isinstance(v, str) for v in pt_ann.values())
     assert st_ann == {
-        "client": fake_c104.Client, "connection": fake_c104.Connection,
-        "common_address": int, "return": None,
+        "client": fake_c104.Client,
+        "connection": fake_c104.Connection,
+        "common_address": int,
+        "return": None,
     }
     assert pt_ann == {
-        "client": fake_c104.Client, "station": fake_c104.Station,
-        "io_address": int, "point_type": fake_c104.Type, "return": None,
+        "client": fake_c104.Client,
+        "station": fake_c104.Station,
+        "io_address": int,
+        "point_type": fake_c104.Type,
+        "return": None,
     }
 
 

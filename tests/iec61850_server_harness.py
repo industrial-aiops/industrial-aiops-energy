@@ -41,9 +41,15 @@ def server_api_available() -> bool:
     except Exception:  # noqa: BLE001 — any import failure means "unavailable"
         return False
     required = (
-        "IedServer_create", "IedServer_start", "IedModel_create",
-        "LogicalDevice_create", "LogicalNode_create", "CDC_MV_create",
-        "IedServer_updateFloatAttributeValue", "toModelNode", "toDataAttribute",
+        "IedServer_create",
+        "IedServer_start",
+        "IedModel_create",
+        "LogicalDevice_create",
+        "LogicalNode_create",
+        "CDC_MV_create",
+        "IedServer_updateFloatAttributeValue",
+        "toModelNode",
+        "toDataAttribute",
         "ModelNode_getChild",
     )
     return all(hasattr(m, name) for name in required)
@@ -91,8 +97,11 @@ def stop_server(server: Any, model: Any) -> None:
     """Best-effort stop + free of the server and its model."""
     import pyiec61850 as m  # noqa: PLC0415
 
-    for fn_name, arg in (("IedServer_stop", server), ("IedServer_destroy", server),
-                         ("IedModel_destroy", model)):
+    for fn_name, arg in (
+        ("IedServer_stop", server),
+        ("IedServer_destroy", server),
+        ("IedModel_destroy", model),
+    ):
         fn = getattr(m, fn_name, None)
         if callable(fn) and arg is not None:
             try:

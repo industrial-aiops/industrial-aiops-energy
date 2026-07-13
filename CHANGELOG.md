@@ -7,6 +7,64 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.6] — 2026-07-13
+
+> **Audit-hardening release.** A focused audit (correctness · security/governance · tests ·
+> docs honesty) of the three read-only connectors drove real fixes: DNP3 no longer reports an
+> offline outstation as online or returns a partial database, IEC-61850 gained a bounded
+> timeout and stopped fabricating values on failure, the substation analyzer no longer calls a
+> lone breaker-open a "selective trip", tests now isolate `IAIOPS_HOME`, and the base pin was
+> raised so the governance endpoint-scoping fix (base `iaiops 0.14.0`) applies. Read-only
+> guarantee unchanged; some paths now raise a clear error where they previously returned a
+> wrong/fabricated value.
+
+### Fixed — read/monitor correctness
+- **DNP3 `is_online()` no longer latches on `enable()`** — it requires the channel to actually
+  reach `ChannelState.OPEN`, so the readiness wait genuinely waits and an offline/unreachable
+  outstation is reported offline (was: reported `online: True`, with `dnp3_integrity_poll`
+  returning an empty database as if the poll had succeeded). (#10)
+- **DNP3 integrity poll waits for scan completion** (stable-count settle) instead of returning as
+  soon as the first measurement group arrives — a fragmented response no longer yields a partial
+  database missing the analog/counter groups. (#10)
+- **IEC-61850 session has a bounded connect + request timeout** (from `timeout_s`), matching the
+  IEC-104/DNP3 sessions — a dead/black-holed IED can no longer stall the MCP worker for the OS
+  default (~75 s) or indefinitely. (#10)
+- **IEC-61850 browse raises on failure instead of a successful-but-empty result** — a bad/unknown
+  reference or transient MMS error surfaces an error rather than an ambiguous `child_count: 0`. (#10)
+- **IEC-61850 `_decode_mms` never fabricates `0.0`** for MMS types outside the typed map
+  (bitstring/quality/timestamp): it returns an opaque/stringified encoding instead of a
+  plausible-looking fake measurement. (#10)
+- **Substation analyzer** no longer emits a `selective_trip` verdict for a lone breaker-open with
+  no protection event — that is now `breaker_operation_no_protection` (inconclusive); and mixed
+  tz-naive/tz-aware timestamps are rejected instead of silently compared as if both were UTC. (#10)
+- **IEC-104** `connected` defaults to `False` (fail-safe) when the connection state attribute is
+  absent; a good/zero `Quality` value now renders by name rather than as `"0"`. (#10)
+
+### Security
+- **DNP3 logging routed to Python `logging` (stderr), never stdout** — opendnp3's `ConsoleLogger`
+  writing to stdout would corrupt the stdio MCP JSON-RPC stream. (#10)
+- **Base pin raised `iaiops>=0.9,<1.0` → `>=0.14,<1.0`** so the edition resolves a base that
+  reads the `endpoint` selector — energy tools' audit records now carry the real endpoint/target
+  and endpoint-scoped approval binds (the fix shipped in base 0.14.0). (#9)
+
+### Fixed — honesty / hints
+- Runtime "library missing" errors now say `pip install iaiops-energy[iec104|dnp3|iec61850]` (the
+  real extras) instead of `iaiops[…]`, which don't exist on the base package. (#10)
+- Connector/tool docstrings narrowed from "Preview — binding/API shape unverified" to
+  "loopback-verified against an in-process server; physical RTU/IED 待核实", matching the shipped
+  validation table. (#10)
+
+### Tests & CI
+- New `tests/conftest.py` isolates `IAIOPS_HOME` per test and resets the base governance
+  singletons — the suite no longer writes the developer's real audit chain. (#9)
+- Added unit coverage for the twice-broken c104 discovery-callback `__annotations__` and for the
+  IEC-61850/DNP3 driver decode helpers that were previously only live-covered. (#10)
+- Validation table + skill matrix now disclose that **DNP3 / IEC-61850 live tests skip on hosted
+  CI** (native libs don't build there; verified via manual/Docker runs) while **IEC-104 is
+  CI-gated** on every push. (#9)
+- CI gate now runs `ruff format --check`; the repo was reformatted to match. (this release)
+- Dropped the stale root `RELEASE-0.1.2.md`. (#9)
+
 ## [0.1.5] — 2026-07-13
 
 > **IEC-104 promoted to `verified (monitor path)` + a real connector fix.** The `c104`

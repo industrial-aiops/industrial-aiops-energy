@@ -178,19 +178,28 @@ class _LibIec61850Adapter:
             return {"reference": reference, "fc": fc, "error": "binding lacks readObject"}
         payload, err = self._unwrap(self._safe(reader, self._conn, reference, fc_val))
         if err not in (0, None):
-            return {"reference": reference, "fc": fc,
-                    "error": f"read failed (IedClientError={err})"}
+            return {
+                "reference": reference,
+                "fc": fc,
+                "error": f"read failed (IedClientError={err})",
+            }
         if payload is None:
-            return {"reference": reference, "fc": fc,
-                    "error": "no value returned (object not found / read failed)"}
+            return {
+                "reference": reference,
+                "fc": fc,
+                "error": "no value returned (object not found / read failed)",
+            }
         # A successful IedClientError (0) can still carry an MMS_DATA_ACCESS_ERROR
         # MmsValue (e.g. unknown object / wrong FC). Decoding that with a scalar
         # accessor silently yields 0.0 — so detect it and surface a real error.
         access_error = self._access_error(payload)
         if access_error is not None:
             self._free_mms(payload)
-            return {"reference": reference, "fc": fc,
-                    "error": f"data access error ({access_error})"}
+            return {
+                "reference": reference,
+                "fc": fc,
+                "error": f"data access error ({access_error})",
+            }
         value = self._decode_mms(payload)
         self._free_mms(payload)
         return {"reference": reference, "fc": fc, "value": value}
