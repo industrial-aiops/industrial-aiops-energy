@@ -108,10 +108,15 @@ def start_server(port: int) -> tuple[Any, list[int]]:
 
     received_type_ids: list[int] = []
 
-    def _record_incoming(server: Any, data: bytes) -> None:  # c104 on_receive_raw sig
+    def _record_incoming(server, data):
         type_id = incoming_type_id(bytes(data))
         if type_id is not None:
             received_type_ids.append(type_id)
+
+    # c104 strictly validates the callback by its real annotations. This module uses
+    # `from __future__ import annotations`, which stringizes them, so set the exact
+    # expected signature — (server: c104.Server, data: bytes) -> None — as real objects.
+    _record_incoming.__annotations__ = {"server": c104.Server, "data": bytes, "return": None}
 
     server.on_receive_raw(callable=_record_incoming)
     server.start()

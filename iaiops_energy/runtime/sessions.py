@@ -58,18 +58,31 @@ def _register_iec104_discovery(client: Any) -> None:
     on_new_station = getattr(client, "on_new_station", None)
     on_new_point = getattr(client, "on_new_point", None)
 
+    # c104 strictly validates each callback by its real annotations. This module uses
+    # `from __future__ import annotations` (annotations become strings), so after
+    # defining each handler we set the exact expected signature as real c104 types.
+    import c104  # noqa: PLC0415 — only reached when the client is a real c104 client
+
     if callable(on_new_station):
 
-        def _add_station(client: Any, connection: Any, common_address: int) -> None:
+        def _add_station(client, connection, common_address):
             connection.add_station(common_address=common_address)
 
+        _add_station.__annotations__ = {
+            "client": c104.Client, "connection": c104.Connection,
+            "common_address": int, "return": None,
+        }
         on_new_station(callable=_add_station)
 
     if callable(on_new_point):
 
-        def _add_point(client: Any, station: Any, io_address: int, point_type: Any) -> None:
+        def _add_point(client, station, io_address, point_type):
             station.add_point(io_address=io_address, type=point_type)
 
+        _add_point.__annotations__ = {
+            "client": c104.Client, "station": c104.Station,
+            "io_address": int, "point_type": c104.Type, "return": None,
+        }
         on_new_point(callable=_add_point)
 
 
