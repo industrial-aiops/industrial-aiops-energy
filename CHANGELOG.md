@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.4] — 2026-07-13
+
+> **IEC-104 verification scaffolding + a real monitor-path fix.** Adds the in-process
+> `c104` server-loopback harness + live test (mirrors DNP3 / IEC-61850) and the client-side
+> station/point auto-discovery the connector was missing, so a general interrogation actually
+> populates the model. **IEC-104 stays `preview (待核实)`** — the live test skips off-Linux
+> (no macOS `c104` wheel); promote it by running `pytest -m integration` on Linux with `c104`.
+> Also corrects a skill-matrix row that overclaimed IEC-104 as loopback-verified.
+
 ### Added — IEC-104 live round-trip scaffolding (NOT yet promoted)
 
 - **`tests/iec104_server_harness.py` + `tests/test_iec104_live.py`**
