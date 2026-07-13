@@ -108,8 +108,10 @@ def iec104_interrogate(target: Any, common_address: int | None = None) -> dict:
     ``common_address`` selects the station; omitted → the endpoint's configured CA,
     else the first discovered station.
     """
-    want = common_address if common_address is not None else (
-        getattr(target, "common_address", 0) or None
+    want = (
+        common_address
+        if common_address is not None
+        else (getattr(target, "common_address", 0) or None)
     )
     with iec104_session(target) as (_client, conn):
         _interrogate(conn, want)
@@ -134,23 +136,34 @@ def iec104_interrogate(target: Any, common_address: int | None = None) -> dict:
 
 def iec104_read_point(target: Any, io_address: int, common_address: int | None = None) -> dict:
     """[READ] Read one monitored point by its information-object address (IOA)."""
-    want = common_address if common_address is not None else (
-        getattr(target, "common_address", 0) or None
+    want = (
+        common_address
+        if common_address is not None
+        else (getattr(target, "common_address", 0) or None)
     )
     ioa = _opt_int(io_address)
     with iec104_session(target) as (_client, conn):
         _interrogate(conn, want)
         station = _pick_station(_stations(conn), want)
         if station is None:
-            return {"endpoint": s(getattr(target, "name", ""), 64),
-                    "error": f"No station with common_address={want} found."}
+            return {
+                "endpoint": s(getattr(target, "name", ""), 64),
+                "error": f"No station with common_address={want} found.",
+            }
         for p in list(getattr(station, "points", []) or [])[:MAX_POINTS]:
             if _opt_int(getattr(p, "io_address", getattr(p, "address", None))) == ioa:
-                return {"endpoint": s(getattr(target, "name", ""), 64),
-                        "common_address": _station_ca(station), "found": True,
-                        **_point_brief(p)}
-    return {"endpoint": s(getattr(target, "name", ""), 64), "found": False,
-            "io_address": ioa, "note": "No point with that IOA on the station."}
+                return {
+                    "endpoint": s(getattr(target, "name", ""), 64),
+                    "common_address": _station_ca(station),
+                    "found": True,
+                    **_point_brief(p),
+                }
+    return {
+        "endpoint": s(getattr(target, "name", ""), 64),
+        "found": False,
+        "io_address": ioa,
+        "note": "No point with that IOA on the station.",
+    }
 
 
 def _interrogate(conn: Any, common_address: int | None) -> None:

@@ -39,18 +39,31 @@ def build_master_adapter(host: str, port: int, outstation: int, master: int) -> 
     from pydnp3 import asiodnp3, asiopal, opendnp3, openpal  # noqa: F401
 
     return _Pydnp3MasterAdapter(
-        asiodnp3=asiodnp3, opendnp3=opendnp3, asiopal=asiopal, openpal=openpal,
-        host=host, port=port, outstation=outstation, master=master,
+        asiodnp3=asiodnp3,
+        opendnp3=opendnp3,
+        asiopal=asiopal,
+        openpal=openpal,
+        host=host,
+        port=port,
+        outstation=outstation,
+        master=master,
     )
 
 
 # Map opendnp3 group numbers to a human measurement type (monitor direction).
 _GROUP_TYPE = {
-    1: "binary_input", 2: "binary_input_event", 3: "double_bit_binary",
-    20: "counter", 21: "frozen_counter", 22: "counter_event",
-    30: "analog_input", 32: "analog_input_event",
-    40: "analog_output_status", 10: "binary_output_status",
-    50: "time_and_interval", 110: "octet_string",
+    1: "binary_input",
+    2: "binary_input_event",
+    3: "double_bit_binary",
+    20: "counter",
+    21: "frozen_counter",
+    22: "counter_event",
+    30: "analog_input",
+    32: "analog_input_event",
+    40: "analog_output_status",
+    10: "binary_output_status",
+    50: "time_and_interval",
+    110: "octet_string",
 }
 
 # opendnp3 delivers measurements to ISOEHandler.Process as typed collections whose
@@ -91,26 +104,28 @@ def _harvest_collection(values: Any, out: list[dict]) -> None:
         # (a real DNP3 group!), surface a diagnostic so the mismatch is visible.
         group = None
         mtype = f"unknown_collection:{type(values).__name__}"
-        _LOG.warning("DNP3: unrecognized opendnp3 collection class %r — "
-                     "point group left unlabeled (待核实)", type(values).__name__)
+        _LOG.warning(
+            "DNP3: unrecognized opendnp3 collection class %r — point group left unlabeled (待核实)",
+            type(values).__name__,
+        )
 
     def _on_item(item: Any) -> None:
         meas = getattr(item, "value", None)
-        out.append({
-            "group": group,
-            "type": mtype,
-            "index": int(getattr(item, "index", 0)),
-            "value": getattr(meas, "value", None),
-            "quality": str(getattr(meas, "flags", "")),
-            "timestamp": str(getattr(meas, "time", "")),
-        })
+        out.append(
+            {
+                "group": group,
+                "type": mtype,
+                "index": int(getattr(item, "index", 0)),
+                "value": getattr(meas, "value", None),
+                "quality": str(getattr(meas, "flags", "")),
+                "timestamp": str(getattr(meas, "time", "")),
+            }
+        )
 
     values.ForeachItem(_on_item)
 
 
-def _settle_scan(
-    count_fn, timeout_s: float, quiet_s: float = 0.2, poll_s: float = 0.05
-) -> None:
+def _settle_scan(count_fn, timeout_s: float, quiet_s: float = 0.2, poll_s: float = 0.05) -> None:
     """Wait for an async integrity scan to *finish* delivering points (bounded).
 
     opendnp3 delivers each object group (binary / analog / counter …) in a SEPARATE
@@ -155,8 +170,18 @@ class _Pydnp3MasterAdapter:
     channel/master wiring to :meth:`enable` so building the adapter never blocks.
     """
 
-    def __init__(self, *, asiodnp3, opendnp3, asiopal, openpal,
-                 host: str, port: int, outstation: int, master: int) -> None:
+    def __init__(
+        self,
+        *,
+        asiodnp3,
+        opendnp3,
+        asiopal,
+        openpal,
+        host: str,
+        port: int,
+        outstation: int,
+        master: int,
+    ) -> None:
         self._asiodnp3 = asiodnp3
         self._opendnp3 = opendnp3
         self._asiopal = asiopal
@@ -193,16 +218,23 @@ class _Pydnp3MasterAdapter:
         self._manager = a3.DNP3Manager(1, self._log_handler)
         self._listener = self._make_channel_listener()
         self._channel = self._manager.AddTCPClient(
-            "iaiops", o3.levels.NORMAL, self._asiopal.ChannelRetry().Default(),
-            self._host, _ANY_LOCAL_ADAPTER, self._port, self._listener,
+            "iaiops",
+            o3.levels.NORMAL,
+            self._asiopal.ChannelRetry().Default(),
+            self._host,
+            _ANY_LOCAL_ADAPTER,
+            self._port,
+            self._listener,
         )
         stack = a3.MasterStackConfig()
         stack.link.LocalAddr = self._master
         stack.link.RemoteAddr = self._outstation
         self._soe = self._make_soe()
         self._dnpmaster = self._channel.AddMaster(
-            "master", self._soe,
-            self._asiodnp3.DefaultMasterApplication().Create(), stack,
+            "master",
+            self._soe,
+            self._asiodnp3.DefaultMasterApplication().Create(),
+            stack,
         )
         self._dnpmaster.Enable()
         self._enabled = True
@@ -265,8 +297,10 @@ class _Pydnp3MasterAdapter:
         """
         base = getattr(self._openpal, "ILogHandler", None)
         if base is None:
-            _LOG.warning("DNP3: openpal.ILogHandler missing — falling back to "
-                         "ConsoleLogger, which MAY emit on stdout (待核实)")
+            _LOG.warning(
+                "DNP3: openpal.ILogHandler missing — falling back to "
+                "ConsoleLogger, which MAY emit on stdout (待核实)"
+            )
             return self._asiodnp3.ConsoleLogger().Create()
 
         class _StderrLogHandler(base):  # type: ignore[misc, valid-type]
@@ -349,9 +383,7 @@ class _Pydnp3MasterAdapter:
             except Exception:  # noqa: BLE001 — shutdown is best-effort
                 pass
 
-        worker = threading.Thread(
-            target=_do_shutdown, name="dnp3-shutdown", daemon=True
-        )
+        worker = threading.Thread(target=_do_shutdown, name="dnp3-shutdown", daemon=True)
         worker.start()
         worker.join(max(0.0, timeout_s))
 

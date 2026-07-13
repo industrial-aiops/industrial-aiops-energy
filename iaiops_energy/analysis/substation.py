@@ -81,9 +81,7 @@ def _classify_type(raw_type: object, label: object) -> str:
     """Map a declared ``type`` (or free-text label) to a known event type."""
     if isinstance(raw_type, str) and raw_type in _KNOWN_TYPES:
         return raw_type
-    text = " ".join(
-        str(value).lower() for value in (raw_type, label) if isinstance(value, str)
-    )
+    text = " ".join(str(value).lower() for value in (raw_type, label) if isinstance(value, str))
     for keyword, mapped in _LABEL_KEYWORDS:
         if keyword in text:
             return mapped
@@ -192,9 +190,13 @@ def _classify_verdict(
 ) -> tuple[str, str, str]:
     """Return (verdict, coordination status, cite-first detail)."""
     if not protections and not opens:
-        return "insufficient", "no_operation", (
-            "No protection pickup/trip and no breaker-open events present — "
-            "nothing to coordinate."
+        return (
+            "insufficient",
+            "no_operation",
+            (
+                "No protection pickup/trip and no breaker-open events present — "
+                "nothing to coordinate."
+            ),
         )
     first_trip = trips[0] if trips else None
     reference = first_trip or (protections[0] if protections else opens[0])
@@ -204,36 +206,56 @@ def _classify_verdict(
             detail = _breaker_failure_detail(first_trip, remote, bf_window_s)
             return "breaker_failure", "breaker_failure", detail
     if open_count > 1:
-        return "backup_operation", "non_selective", (
-            f"{open_count} breakers opened — the outage spread beyond one zone; "
-            "backup/adjacent protection operated (non-selective)."
+        return (
+            "backup_operation",
+            "non_selective",
+            (
+                f"{open_count} breakers opened — the outage spread beyond one zone; "
+                "backup/adjacent protection operated (non-selective)."
+            ),
         )
     if opens and (opens[0].ts - reference.ts).total_seconds() > margin_s:
         delay = (opens[0].ts - reference.ts).total_seconds()
-        return "backup_operation", "non_selective", (
-            f"Breaker {opens[0].ref} opened {delay:.3f}s after the first protection "
-            f"event — beyond the {margin_s:.3f}s backup margin, so a slow/upstream "
-            "time-graded backup cleared it (non-selective)."
+        return (
+            "backup_operation",
+            "non_selective",
+            (
+                f"Breaker {opens[0].ref} opened {delay:.3f}s after the first protection "
+                f"event — beyond the {margin_s:.3f}s backup margin, so a slow/upstream "
+                "time-graded backup cleared it (non-selective)."
+            ),
         )
     if open_count == 1:
         if not protections:
             # A breaker opened but NO relay pickup/trip is in the SOE — this is not a
             # protection-cleared fault (no selectivity to confirm). Could be a manual/
             # local open or missing relay events; never label it "selective_trip".
-            return "breaker_operation_no_protection", "no_protection_record", (
-                f"Breaker {opens[0].ref} opened but no protection pickup/trip was "
-                "recorded in the SOE — a breaker operation without a protection "
-                "record (manual/local open, or the relay events are missing). Cannot "
-                "confirm selective protection coordination; check the relay targets."
+            return (
+                "breaker_operation_no_protection",
+                "no_protection_record",
+                (
+                    f"Breaker {opens[0].ref} opened but no protection pickup/trip was "
+                    "recorded in the SOE — a breaker operation without a protection "
+                    "record (manual/local open, or the relay events are missing). Cannot "
+                    "confirm selective protection coordination; check the relay targets."
+                ),
             )
-        return "selective_trip", "selective", (
-            f"One protection operation cleared via one breaker ({opens[0].ref}) within "
-            "the coordination window — the fault was contained to a single zone "
-            "(selective)."
+        return (
+            "selective_trip",
+            "selective",
+            (
+                f"One protection operation cleared via one breaker ({opens[0].ref}) within "
+                "the coordination window — the fault was contained to a single zone "
+                "(selective)."
+            ),
         )
-    return "insufficient", "inconclusive", (
-        "Protection activity present but no confirmed breaker interruption — "
-        "inconclusive; check the breaker-status points in the SOE."
+    return (
+        "insufficient",
+        "inconclusive",
+        (
+            "Protection activity present but no confirmed breaker interruption — "
+            "inconclusive; check the breaker-status points in the SOE."
+        ),
     )
 
 

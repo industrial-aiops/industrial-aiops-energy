@@ -57,9 +57,7 @@ def iec61850_browse(reference: str, endpoint: Optional[str] = None) -> dict:
 @mcp.tool()
 @governed_tool(risk_level="low")
 @tool_errors("dict")
-def iec61850_read(
-    reference: str, fc: str = "MX", endpoint: Optional[str] = None
-) -> dict:
+def iec61850_read(reference: str, fc: str = "MX", endpoint: Optional[str] = None) -> dict:
     """[READ][risk=low] Read one data attribute by object-reference + functional constraint.
 
     Args:

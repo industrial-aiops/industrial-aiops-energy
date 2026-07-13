@@ -32,7 +32,7 @@ pytest.importorskip("pydnp3")  # skip the whole module when the binding is unava
 # Child script: seed a real outstation, then verify the connector's read path against
 # it. Exits 0 and prints LIVE_OK only when every seeded point round-trips. Kept as a
 # string so the parent can run it in a fresh interpreter.
-_CHILD_SCRIPT = r'''
+_CHILD_SCRIPT = r"""
 import os, socket, sys
 
 from pydnp3 import asiodnp3, asiopal, opendnp3, openpal
@@ -109,7 +109,7 @@ def main():
 
 
 main()
-'''
+"""
 
 
 @pytest.mark.integration
