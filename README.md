@@ -16,11 +16,13 @@ normalized ISA-95/18.2 model), and MCP server infrastructure — this repo only 
 the three energy connectors + their session builders + MCP tools. Read-first: no
 control-direction writes are exposed.
 
-Current release: **0.1.4** (requires `iaiops>=0.9,<1.0`). New in 0.1.4: the IEC-104
-client gained the missing station/point **auto-discovery** + a general-interrogation-
-before-read (so a real outstation's points actually populate), plus an in-process `c104`
-**server-loopback harness + live test** mirroring DNP3 / IEC-61850 — though IEC-104
-**stays `待核实`** (the live test skips off-Linux; `c104` ships no macOS wheel). Since 0.1.3 the server has
+Current release: **0.1.5** (requires `iaiops>=0.9,<1.0`). New in 0.1.5: the IEC-104
+**monitor path is now verified** — a real `c104` client↔server round-trip (link status →
+general interrogation → point read, monitor-only) passes in a Linux container
+(`tests/test_iec104_live.py`), joining DNP3 / IEC-61850 on the verified ladder; and a
+callback-signature bug in the client-side station/point **auto-discovery** (added 0.1.4,
+never runnable off-Linux) is fixed so a real outstation's points actually populate.
+**Physical RTU still `待核实`.** Since 0.1.3 the server has
 its **own MCP identity** — `iaiops-energy-mcp` runs a dedicated `FastMCP("iaiops-energy")`
 instance with energy-specific instructions (IEC-104 / DNP3 / IEC-61850, read-first,
 no control/operate), with the base cross-protocol brain tools mirrored onto it — plus
@@ -32,13 +34,13 @@ tool lacks the governance marker).
 
 ## 🧪 测试与共创 / Beta testing & co-creation
 
-**变电站现场的测试反馈是这个包最缺的东西。** DNP3 与 IEC-61850 的监视路径已对真实库
-(opendnp3 outstation / libiec61850 MMS server)loopback 验证,但 **真实 RTU / IED /
-IEC-104 子站一律 `待核实`** —— 如果你能在授权的测试环境里对真实变电设备跑一遍
+**变电站现场的测试反馈是这个包最缺的东西。** IEC-104 / DNP3 / IEC-61850 三条监视路径均已
+对真实库(c104 / opendnp3 / libiec61850 的进程内 server)在 Linux 容器里 loopback 往返验证,但 **真实 RTU / IED
+物理设备一律 `待核实`** —— 如果你能在授权的测试环境里对真实变电设备跑一遍
 `iaiops doctor`,我们非常想听结果。经你验证的设备会署名写进支持矩阵。
 
 **Live substation RTU / IED / IEC-104 field testing is what this package needs most.**
-The DNP3 and IEC-61850 monitor paths are library-loopback-verified, but real gear stays
+The IEC-104, DNP3 and IEC-61850 monitor paths are library-loopback-verified, but real gear stays
 `待核实`. Report results (protocol + device model + `iaiops doctor` output) via the base
 repo's pinned issue:
 👉 [industrial-aiops#28 — Call for field-testing partners (v0.10.0)](https://github.com/industrial-aiops/industrial-aiops/issues/28)
@@ -91,7 +93,7 @@ protocol is promoted.
 | Protocol | Status | Evidence |
 | --- | --- | --- |
 | **DNP3 / IEEE 1815** | **verified (monitor path)** | Real master↔outstation round-trip against a live **opendnp3** outstation (`pydnp3`): `is_online()` reflects the real channel `OnStateChange`, and `integrity_poll()` (Class 0/1/2/3) returns the seeded binary/analog/counter database grouped by type. See `tests/test_dnp3_live.py` (`@pytest.mark.integration`, skips when `pydnp3` is absent). No physical RTU. |
-| IEC 60870-5-104 | preview (`待核实`) | Client↔server round-trip **scaffolded** against an in-process real `c104` server (`tests/test_iec104_live.py` + `tests/iec104_server_harness.py`, `@pytest.mark.integration`): a general interrogation returns the seeded points, a bad IOA yields no fabricated value, and **no control ASDU** (C_SC / C_DC / C_SE) is issued. **Not yet promoted** — `c104` builds no macOS wheel, so the test skips off-Linux; run `pytest -m integration` on Linux with `c104` installed to verify. No physical RTU. |
+| **IEC 60870-5-104** | **verified (monitor path)** | Real client↔server round-trip against an in-process **`c104`** server (`tests/test_iec104_live.py` + `tests/iec104_server_harness.py`, `@pytest.mark.integration`, passes in a Linux container): `iec104_connection_info` discovers the seeded station, `iec104_interrogate` (general interrogation / C_IC) returns the seeded `M_ME_NC_1` + `M_SP_NA_1` points with quality, `iec104_read_point` reads the measurand, a bad IOA yields `found=False` with **no fabricated value**, and server-side ASDU capture proves **no control ASDU** (C_SC / C_DC / C_SE) is ever issued. `c104` ships no macOS wheel so the test skips on macOS (runs in CI / Linux). No physical RTU. Monitor/read only. |
 | **IEC 61850 (MMS)** | **verified (monitor path)** | Real client↔server MMS round-trip against an in-process **libiec61850** MMS server built with `pyiec61850`'s server API: `iec61850_device_directory` lists the logical device (and browses its logical nodes / data objects), and `iec61850_read` returns a seeded measurand (`TotW.mag.f`, FC `MX`) over real ISO-on-TCP; a bad reference surfaces an MMS data-access error instead of a fabricated value. See `tests/test_iec61850_live.py` (`@pytest.mark.integration`, skips when `pyiec61850` / its server API is absent). No physical IED. Read/monitor only — control / GOOSE / SV out of scope. |
 
 DNP3 notes: read-only / monitor direction only (no control). `pydnp3` 0.1.0 ships no
