@@ -3,8 +3,8 @@
 Governed at risk_level='low' (monitor direction). Control (CROB / analog output)
 is intentionally NOT exposed in this preview. pydnp3/opendnp3 is an OPTIONAL extra
 (``pip install iaiops-energy[dnp3]``) imported lazily; when missing, every tool
-returns a teaching error dict. Preview — binding/API shape unverified against a
-live outstation.
+returns a teaching error dict. Monitor path is loopback-verified against an
+in-process opendnp3 outstation; a PHYSICAL outstation is 待核实.
 """
 
 from typing import Optional

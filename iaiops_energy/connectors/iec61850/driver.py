@@ -33,6 +33,14 @@ FUNCTIONAL_CONSTRAINTS = ("MX", "ST", "CF", "DC", "SP", "SG", "SE", "EX")
 _CALL_FAILED = -1
 
 
+class BrowseError(RuntimeError):
+    """A model-browse call genuinely FAILED (vs. a legitimately empty node).
+
+    Raised so a failed browse surfaces an error instead of an indistinguishable
+    empty ``[]``. The session translates it to a teaching ``OTConnectionError``.
+    """
+
+
 def build_mms_adapter(host: str, port: int) -> Any:
     """Build an IEC 61850 MMS client adapter for ``host:port``.
 
@@ -58,9 +66,15 @@ class _LibIec61850Adapter:
         self._port = port
         self._conn = None
 
-    def connect(self) -> None:
+    def connect(self, timeout_s: float | None = None) -> None:
         lib = self._lib
         self._conn = lib.IedConnection_create()
+        # Bound the connect + every request BEFORE dialing: a dead IED otherwise
+        # hangs the MMS round-trip on the OS default (~75s) or indefinitely, blocking
+        # the MCP worker. Deriving both from the session timeout keeps this session in
+        # step with the bounded iec104/dnp3 sessions.
+        if timeout_s is not None and timeout_s > 0:
+            self._apply_timeouts(timeout_s)
         # IedConnection_connect(con, host, port) — returns a bare IedClientError
         # scalar in this binding (0 == success). Some builds return a tuple; treat
         # a non-zero code in EITHER form as a failure so a bad connect raises the
@@ -69,6 +83,23 @@ class _LibIec61850Adapter:
         _, code = self._unwrap(result)
         if isinstance(code, int) and code != 0:
             raise ConnectionError(f"IedConnection_connect error={code}")
+
+    def _apply_timeouts(self, timeout_s: float) -> None:
+        """Set the IedConnection connect + request timeouts (milliseconds).
+
+        Best-effort: a binding lacking a setter cannot be bounded here (待核实), but
+        the common libiec61850 SWIG surface exposes both. Never raises — a missing
+        setter must not defeat a connect the binding could still make.
+        """
+        lib = self._lib
+        ms = int(max(1.0, timeout_s * 1000.0))
+        for name in ("IedConnection_setConnectTimeout", "IedConnection_setRequestTimeout"):
+            fn = getattr(lib, name, None)
+            if callable(fn):
+                try:
+                    fn(self._conn, ms)
+                except Exception:  # noqa: BLE001 — best-effort timeout setter
+                    pass
 
     def close(self) -> None:
         lib, con = self._lib, self._conn
@@ -83,12 +114,21 @@ class _LibIec61850Adapter:
                     pass
 
     def get_logical_devices(self) -> list[str]:
+        """List the IED's logical devices.
+
+        Distinguishes a genuinely empty model (returns ``[]``) from a *failed* browse
+        (raises): a swallowed failure returning ``[]`` would be indistinguishable from
+        an empty device and violate the iron rule (a failed read must error). The
+        raised error is translated to an ``OTConnectionError`` by the session.
+        """
         fn = getattr(self._lib, "IedConnection_getLogicalDeviceList", None)
         if not callable(fn):
-            return []
+            raise BrowseError("binding lacks IedConnection_getLogicalDeviceList")
         payload, err = self._unwrap(self._safe(fn, self._conn))
-        if err not in (0, None) or payload is None:
-            return []
+        if err not in (0, None):
+            raise BrowseError(f"getLogicalDeviceList failed (IedClientError={err})")
+        if payload is None:
+            return []  # a successful call with no payload → legitimately empty
         names = self._linkedlist_to_str(payload)
         self._free_list(payload)
         return names
@@ -108,17 +148,26 @@ class _LibIec61850Adapter:
             ("IedConnection_getLogicalNodeDirectory", (reference, acsi_do)),
             ("IedConnection_getDataDirectory", (reference,)),
         )
+        saw_success = False
         for name, extra in attempts:
             fn = getattr(self._lib, name, None)
             if not callable(fn):
                 continue
             payload, err = self._unwrap(self._safe(fn, self._conn, *extra))
-            if err in (0, None) and payload is not None:
+            if err not in (0, None):
+                continue  # wrong browse level for this reference — try the next
+            saw_success = True
+            if payload is not None:
                 names = self._linkedlist_to_str(payload)
                 self._free_list(payload)
                 if names:
                     return names
-        return []
+            # success but empty payload at this level → keep trying other levels
+        if not saw_success:
+            # Every applicable browse call failed (error code / absent) — surface it
+            # rather than fabricate a successful-but-empty node (iron rule).
+            raise BrowseError(f"browse of '{reference}' failed at every ACSI level")
+        return []  # a level succeeded with no children → legitimately empty node
 
     def read(self, reference: str, fc: str) -> dict:
         """Read one data attribute by object-reference + functional constraint."""
@@ -239,7 +288,14 @@ class _LibIec61850Adapter:
         return getattr(self._lib, f"IEC61850_FC_{fc}", fc)
 
     def _decode_mms(self, mms_value: Any) -> Any:
-        """Decode an ``MmsValue`` to a Python scalar/string using its MMS type."""
+        """Decode an ``MmsValue`` to a Python scalar/string using its MMS type.
+
+        Critically, a numeric accessor is used ONLY when ``MmsValue_getType`` confirms
+        a numeric type. The old fallback tried ``MmsValue_toFloat`` first, which
+        libiec61850 returns ``0.0`` for a NON-float value — so a bitstring / quality /
+        timestamp silently read as ``value: 0.0`` (a fabricated reading). For a type
+        with no mapped accessor we return an opaque string encoding, never a bare 0.0.
+        """
         lib = self._lib
         get_type = getattr(lib, "MmsValue_getType", None)
         if callable(get_type):
@@ -247,17 +303,43 @@ class _LibIec61850Adapter:
             if decoder is not None:
                 try:
                     return decoder(mms_value)
-                except Exception:  # noqa: BLE001 — fall through to best-effort
+                except Exception:  # noqa: BLE001 — fall through to opaque encoding
                     pass
-        # Best-effort fallback for bindings without getType / unmapped types.
-        for name in ("MmsValue_toFloat", "MmsValue_toInt64", "MmsValue_toInt32",
-                     "MmsValue_getBoolean", "MmsValue_toString"):
+            # Type known but unmapped (bitstring / quality / timestamp / …), or the
+            # matched accessor raised: DO NOT guess with toFloat (fabricates 0.0).
+            return self._opaque_mms(mms_value)
+        # No getType on this binding: we cannot confirm a numeric type, so prefer
+        # string/boolean accessors and NEVER toFloat (which would fabricate 0.0).
+        for name in ("MmsValue_toString", "MmsValue_getBoolean"):
             fn = getattr(lib, name, None)
             if callable(fn):
                 try:
                     return fn(mms_value)
                 except Exception:  # noqa: BLE001 — wrong accessor for this type
                     continue
+        return self._opaque_mms(mms_value)
+
+    def _opaque_mms(self, mms_value: Any) -> Any:
+        """Return a non-fabricating opaque encoding for an unmapped ``MmsValue``.
+
+        Tries the string accessor (meaningful for many composite types); otherwise a
+        type-tagged marker so the caller sees *what* it was, not a misleading scalar.
+        """
+        lib = self._lib
+        to_string = getattr(lib, "MmsValue_toString", None)
+        if callable(to_string):
+            try:
+                text = to_string(mms_value)
+                if text not in (None, ""):
+                    return str(text)
+            except Exception:  # noqa: BLE001 — not a string-representable value
+                pass
+        get_type = getattr(lib, "MmsValue_getType", None)
+        if callable(get_type):
+            try:
+                return f"<unmapped MmsValue type={get_type(mms_value)}>"
+            except Exception:  # noqa: BLE001
+                pass
         return str(mms_value)
 
     def _typed_decoder(self, get_type: Any, mms_value: Any) -> Any:
@@ -292,4 +374,4 @@ class _LibIec61850Adapter:
             return [str(value)]
 
 
-__all__ = ["build_mms_adapter", "FUNCTIONAL_CONSTRAINTS"]
+__all__ = ["build_mms_adapter", "FUNCTIONAL_CONSTRAINTS", "BrowseError"]

@@ -6,9 +6,11 @@ and read data attributes by object-reference + functional constraint (FC). This
 connector is **read-only**: device directory, model browse, and attribute read.
 Control (Oper / select-before-operate) is OT-dangerous and NOT exposed here.
 
-All libiec61850 calls are isolated in ``iaiops.connectors.iec61850.driver``
-(待核实 — unverified against a live IED). The ops use the adapter's uniform
-interface and are mock-testable.
+All libiec61850 calls are isolated in
+``iaiops_energy.connectors.iec61850.driver``. The binding/API shape is
+loopback-verified against an in-process libiec61850 MMS server (see
+``tests/test_iec61850_live.py``); a PHYSICAL IED is 待核实. The ops use the
+adapter's uniform interface and are mock-testable.
 """
 
 from __future__ import annotations

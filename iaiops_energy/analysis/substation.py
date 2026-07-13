@@ -93,7 +93,10 @@ def _classify_type(raw_type: object, label: object) -> str:
 def _parse_ts(value: object) -> datetime | None:
     """Parse an ISO-8601 timestamp (tolerating a trailing ``Z``); None if bad.
 
-    Timezone-aware values are normalized to naive UTC so a mixed SOE still sorts.
+    Timezone-awareness is PRESERVED here (aware stays aware, naive stays naive) so
+    :func:`_normalize` can detect a mixed-tz SOE — a tz-naive local time silently
+    treated as UTC would skew the inter-event delays that drive breaker-failure /
+    backup-margin decisions.
     """
     if not isinstance(value, str):
         return None
@@ -101,17 +104,20 @@ def _parse_ts(value: object) -> datetime | None:
     if text[-1:] in ("Z", "z"):
         text = text[:-1] + "+00:00"
     try:
-        parsed = datetime.fromisoformat(text)
+        return datetime.fromisoformat(text)
     except ValueError:
         return None
-    if parsed.tzinfo is not None:
-        parsed = parsed.astimezone(UTC).replace(tzinfo=None)
-    return parsed
 
 
 def _normalize(events: list[dict]) -> tuple[list[_Event], int]:
-    """Parse + sort SOE events; return (sorted events, ignored count)."""
-    parsed: list[_Event] = []
+    """Parse + sort SOE events; return (sorted events, ignored count).
+
+    Guards against a mixed timezone SOE: if ANY event is tz-aware, tz-naive entries
+    are ambiguous (local vs UTC) and would corrupt inter-event delay math, so they
+    are rejected (counted as ignored) rather than silently assumed UTC. All-aware
+    events normalize to naive UTC; an all-naive SOE is left as-is (uniform).
+    """
+    raw: list[tuple[datetime, str, str]] = []
     ignored = 0
     for event in events:
         if not isinstance(event, dict):
@@ -123,7 +129,16 @@ def _normalize(events: list[dict]) -> tuple[list[_Event], int]:
             continue
         ref = str(event.get("ref", "")) or "?"
         etype = _classify_type(event.get("type"), event.get("label"))
-        parsed.append(_Event(ref=ref, ts=ts, type=etype))
+        raw.append((ts, ref, etype))
+
+    any_aware = any(ts.tzinfo is not None for ts, _, _ in raw)
+    parsed: list[_Event] = []
+    for ts, ref, etype in raw:
+        if any_aware and ts.tzinfo is None:
+            ignored += 1  # ambiguous tz-naive local time amid tz-aware events
+            continue
+        norm = ts.astimezone(UTC).replace(tzinfo=None) if ts.tzinfo is not None else ts
+        parsed.append(_Event(ref=ref, ts=norm, type=etype))
     parsed.sort(key=lambda entry: entry.ts)
     return parsed, ignored
 
@@ -201,6 +216,16 @@ def _classify_verdict(
             "time-graded backup cleared it (non-selective)."
         )
     if open_count == 1:
+        if not protections:
+            # A breaker opened but NO relay pickup/trip is in the SOE — this is not a
+            # protection-cleared fault (no selectivity to confirm). Could be a manual/
+            # local open or missing relay events; never label it "selective_trip".
+            return "breaker_operation_no_protection", "no_protection_record", (
+                f"Breaker {opens[0].ref} opened but no protection pickup/trip was "
+                "recorded in the SOE — a breaker operation without a protection "
+                "record (manual/local open, or the relay events are missing). Cannot "
+                "confirm selective protection coordination; check the relay targets."
+            )
         return "selective_trip", "selective", (
             f"One protection operation cleared via one breaker ({opens[0].ref}) within "
             "the coordination window — the fault was contained to a single zone "
