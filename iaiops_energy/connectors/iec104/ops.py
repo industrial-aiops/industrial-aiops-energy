@@ -69,6 +69,7 @@ def _station_ca(station: Any) -> int | None:
 def iec104_connection_info(target: Any) -> dict:
     """[READ] Connect and report link status + the discovered stations (ASDU CAs)."""
     with iec104_session(target) as (_client, conn):
+        _interrogate(conn, _configured_ca(target))
         stations = _stations(conn)
         cas = [ca for ca in (_station_ca(st) for st in stations) if ca is not None]
         connected = bool(getattr(conn, "is_connected", True))
@@ -95,6 +96,7 @@ def iec104_interrogate(target: Any, common_address: int | None = None) -> dict:
         getattr(target, "common_address", 0) or None
     )
     with iec104_session(target) as (_client, conn):
+        _interrogate(conn, want)
         station = _pick_station(_stations(conn), want)
         if station is None:
             return {
@@ -121,6 +123,7 @@ def iec104_read_point(target: Any, io_address: int, common_address: int | None =
     )
     ioa = _opt_int(io_address)
     with iec104_session(target) as (_client, conn):
+        _interrogate(conn, want)
         station = _pick_station(_stations(conn), want)
         if station is None:
             return {"endpoint": s(getattr(target, "name", ""), 64),
@@ -132,6 +135,29 @@ def iec104_read_point(target: Any, io_address: int, common_address: int | None =
                         **_point_brief(p)}
     return {"endpoint": s(getattr(target, "name", ""), 64), "found": False,
             "io_address": ioa, "note": "No point with that IOA on the station."}
+
+
+def _interrogate(conn: Any, common_address: int | None) -> None:
+    """Best-effort general interrogation (C_IC / Class 0) to populate/refresh the
+    client model before a read.
+
+    C_IC is the IEC-104 *read* mechanism (总召 — reads all monitored points of a
+    station), NOT a control command, so this stays monitor-only. No-op when the
+    connection cannot interrogate (e.g. a mock) or no common address is known; a
+    failed refresh falls back to whatever points are already cached.
+    """
+    interrogation = getattr(conn, "interrogation", None)
+    if not callable(interrogation) or not common_address:
+        return
+    try:
+        interrogation(common_address=common_address, wait_for_response=True)
+    except Exception:  # noqa: BLE001 — a failed refresh must not break the read
+        pass
+
+
+def _configured_ca(target: Any) -> int | None:
+    """The endpoint's configured ASDU common address, or None when unset (0)."""
+    return int(getattr(target, "common_address", 0) or 0) or None
 
 
 def _pick_station(stations: list[Any], want: int | None) -> Any | None:
