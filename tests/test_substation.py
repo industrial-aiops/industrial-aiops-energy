@@ -158,7 +158,7 @@ def test_mixed_tz_naive_entries_are_rejected_not_assumed_utc() -> None:
     result = substation.substation_event_analysis(
         [
             _ev("R1", "protection_trip", "2026-07-12T10:00:00+00:00"),  # aware
-            _ev("BK2", "breaker_open", "2026-07-12T10:00:00.300"),      # naive → drop
+            _ev("BK2", "breaker_open", "2026-07-12T10:00:00.300"),  # naive → drop
         ]
     )
     assert result["ignored"] == 1

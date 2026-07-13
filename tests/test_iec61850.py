@@ -129,6 +129,7 @@ def test_wrong_protocol_guarded():
 @pytest.mark.unit
 def test_browse_failure_surfaces_error_not_empty(monkeypatch):
     """A FAILED browse must raise (→ OTConnectionError), not fabricate child_count 0."""
+
     class _Failing(_FakeAdapter):
         def get_logical_devices(self):
             raise BrowseError("browse blew up")
@@ -174,19 +175,19 @@ def test_get_logical_devices_empty_vs_failure():
 @pytest.mark.unit
 def test_get_data_directory_empty_vs_failure():
     # A level succeeds with names → those names.
-    ok = _adapter(SN(
-        IedConnection_getLogicalDeviceDirectory=lambda c, ref: [["LLN0", "MMXU1"], 0]))
+    ok = _adapter(SN(IedConnection_getLogicalDeviceDirectory=lambda c, ref: [["LLN0", "MMXU1"], 0]))
     assert ok.get_data_directory("IED1LD0") == ["LLN0", "MMXU1"]
     # A level succeeds but empty → legitimately empty [].
-    empty = _adapter(SN(
-        IedConnection_getLogicalDeviceDirectory=lambda c, ref: [None, 0]))
+    empty = _adapter(SN(IedConnection_getLogicalDeviceDirectory=lambda c, ref: [None, 0]))
     assert empty.get_data_directory("IED1LD0") == []
     # Every applicable level fails → raise.
-    failing = _adapter(SN(
-        IedConnection_getLogicalDeviceDirectory=lambda c, ref: 3,
-        IedConnection_getLogicalNodeDirectory=lambda c, ref, acsi: 3,
-        IedConnection_getDataDirectory=lambda c, ref: 3,
-    ))
+    failing = _adapter(
+        SN(
+            IedConnection_getLogicalDeviceDirectory=lambda c, ref: 3,
+            IedConnection_getLogicalNodeDirectory=lambda c, ref, acsi: 3,
+            IedConnection_getDataDirectory=lambda c, ref: 3,
+        )
+    )
     with pytest.raises(BrowseError):
         failing.get_data_directory("IED1LD0")
 
@@ -197,8 +198,8 @@ def test_decode_mms_never_fabricates_zero_for_unmapped_type():
     unmapped = object()
     lib = SN(
         MmsValue_getType=lambda v: unmapped,
-        MmsValue_toFloat=lambda v: 0.0,        # would fabricate 0.0 if used
-        MmsValue_toString=lambda v: "0101",    # opaque encoding instead
+        MmsValue_toFloat=lambda v: 0.0,  # would fabricate 0.0 if used
+        MmsValue_toString=lambda v: "0101",  # opaque encoding instead
     )
     result = _adapter(lib)._decode_mms(object())
     assert result != 0.0
@@ -229,14 +230,15 @@ def test_decode_mms_opaque_marker_when_no_string_accessor():
 @pytest.mark.unit
 def test_access_error_detected_and_absent():
     ae = object()
-    detected = _adapter(SN(
-        MmsValue_getType=lambda v: ae,
-        MMS_DATA_ACCESS_ERROR=ae,
-        MmsValue_getDataAccessError=lambda v: "OBJECT_UNDEFINED",
-    ))
+    detected = _adapter(
+        SN(
+            MmsValue_getType=lambda v: ae,
+            MMS_DATA_ACCESS_ERROR=ae,
+            MmsValue_getDataAccessError=lambda v: "OBJECT_UNDEFINED",
+        )
+    )
     assert detected._access_error(object()) == "OBJECT_UNDEFINED"
-    absent = _adapter(SN(MmsValue_getType=lambda v: object(),
-                         MMS_DATA_ACCESS_ERROR=object()))
+    absent = _adapter(SN(MmsValue_getType=lambda v: object(), MMS_DATA_ACCESS_ERROR=object()))
     assert absent._access_error(object()) is None
 
 

@@ -42,19 +42,44 @@ class _FakeAdapter:
 @pytest.fixture
 def outstation(monkeypatch):
     points = [
-        {"group": 1, "type": "binary_input", "index": 0, "value": True,
-         "quality": "ONLINE", "timestamp": ""},
-        {"group": 30, "type": "analog_input", "index": 0, "value": 120.5,
-         "quality": "ONLINE", "timestamp": ""},
-        {"group": 30, "type": "analog_input", "index": 1, "value": 60.0,
-         "quality": "ONLINE", "timestamp": ""},
-        {"group": 20, "type": "counter", "index": 0, "value": 9000,
-         "quality": "ONLINE", "timestamp": ""},
+        {
+            "group": 1,
+            "type": "binary_input",
+            "index": 0,
+            "value": True,
+            "quality": "ONLINE",
+            "timestamp": "",
+        },
+        {
+            "group": 30,
+            "type": "analog_input",
+            "index": 0,
+            "value": 120.5,
+            "quality": "ONLINE",
+            "timestamp": "",
+        },
+        {
+            "group": 30,
+            "type": "analog_input",
+            "index": 1,
+            "value": 60.0,
+            "quality": "ONLINE",
+            "timestamp": "",
+        },
+        {
+            "group": 20,
+            "type": "counter",
+            "index": 0,
+            "value": 9000,
+            "quality": "ONLINE",
+            "timestamp": "",
+        },
     ]
     adapter = _FakeAdapter(points)
     monkeypatch.setattr(conn, "_build_dnp3_client", lambda target: adapter)
-    target = TargetConfig(name="rtu2", protocol="dnp3", host="10.0.0.6",
-                          unit_id=4, master_address=1)
+    target = TargetConfig(
+        name="rtu2", protocol="dnp3", host="10.0.0.6", unit_id=4, master_address=1
+    )
     return target, adapter
 
 
@@ -118,9 +143,14 @@ def _adapter_with_fake_opendnp3():
         ChannelState=types.SimpleNamespace(OPEN="OPEN", CLOSED="CLOSED"),
     )
     return _Pydnp3MasterAdapter(
-        asiodnp3=types.SimpleNamespace(), opendnp3=opendnp3,
-        asiopal=types.SimpleNamespace(), openpal=types.SimpleNamespace(),
-        host="10.0.0.6", port=20000, outstation=4, master=1,
+        asiodnp3=types.SimpleNamespace(),
+        opendnp3=opendnp3,
+        asiopal=types.SimpleNamespace(),
+        openpal=types.SimpleNamespace(),
+        host="10.0.0.6",
+        port=20000,
+        outstation=4,
+        master=1,
     ), opendnp3
 
 
@@ -152,8 +182,15 @@ def test_integrity_poll_waits_for_all_fragmented_groups():
         for grp, mtype in ((1, "binary_input"), (30, "analog_input"), (20, "counter")):
             time.sleep(0.05)
             adapter._handler.points.append(
-                {"group": grp, "type": mtype, "index": 0, "value": 1,
-                 "quality": "", "timestamp": ""})
+                {
+                    "group": grp,
+                    "type": mtype,
+                    "index": 0,
+                    "value": 1,
+                    "quality": "",
+                    "timestamp": "",
+                }
+            )
 
     class _FakeMaster:
         def ScanClasses(self, field):  # noqa: N802 — opendnp3 name
@@ -173,8 +210,11 @@ def test_harvest_unknown_collection_class_is_flagged_not_mislabeled():
 
     class ICollectionFooBar:
         def ForeachItem(self, cb):  # noqa: N802 — opendnp3 name
-            cb(types.SimpleNamespace(
-                index=0, value=types.SimpleNamespace(value=1, flags="", time="")))
+            cb(
+                types.SimpleNamespace(
+                    index=0, value=types.SimpleNamespace(value=1, flags="", time="")
+                )
+            )
 
     out: list[dict] = []
     _harvest_collection(ICollectionFooBar(), out)
@@ -188,8 +228,11 @@ def test_harvest_known_collection_maps_group_and_value():
 
     class ICollectionIndexedAnalog:
         def ForeachItem(self, cb):  # noqa: N802 — opendnp3 name
-            cb(types.SimpleNamespace(
-                index=2, value=types.SimpleNamespace(value=120.5, flags="ONLINE", time="")))
+            cb(
+                types.SimpleNamespace(
+                    index=2, value=types.SimpleNamespace(value=120.5, flags="ONLINE", time="")
+                )
+            )
 
     out: list[dict] = []
     _harvest_collection(ICollectionIndexedAnalog(), out)

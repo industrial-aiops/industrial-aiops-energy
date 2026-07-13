@@ -47,11 +47,7 @@ def skill_text() -> str:
 
 
 def _registered_energy_tool_names() -> tuple[str, ...]:
-    return tuple(
-        name
-        for name in mcp._tool_manager._tools
-        if name.startswith(ENERGY_TOOL_PREFIXES)
-    )
+    return tuple(name for name in mcp._tool_manager._tools if name.startswith(ENERGY_TOOL_PREFIXES))
 
 
 def _protocol_pins_from_pyproject() -> dict[str, str]:
@@ -74,9 +70,7 @@ def test_every_registered_energy_tool_is_documented_in_skill(skill_text: str) ->
     """A shipped energy tool the skill never names is invisible to agents."""
     names = _registered_energy_tool_names()
     assert names, "no energy tools registered — server registration is broken"
-    missing = tuple(
-        name for name in names if f"`{name}`" not in skill_text
-    )
+    missing = tuple(name for name in names if f"`{name}`" not in skill_text)
     assert not missing, f"energy tools registered but absent from SKILL.md: {missing}"
 
 

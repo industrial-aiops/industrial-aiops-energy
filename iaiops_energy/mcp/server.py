@@ -76,8 +76,7 @@ def assert_all_tools_governed() -> None:
     )
     if ungoverned:
         raise RuntimeError(
-            f"refusing to start: MCP tools missing @governed_tool harness marker: "
-            f"{ungoverned}"
+            f"refusing to start: MCP tools missing @governed_tool harness marker: {ungoverned}"
         )
 
 

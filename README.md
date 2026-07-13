@@ -16,13 +16,15 @@ normalized ISA-95/18.2 model), and MCP server infrastructure — this repo only 
 the three energy connectors + their session builders + MCP tools. Read-first: no
 control-direction writes are exposed.
 
-Current release: **0.1.5** (requires `iaiops>=0.14,<1.0`). New in 0.1.5: the IEC-104
-**monitor path is now verified** — a real `c104` client↔server round-trip (link status →
-general interrogation → point read, monitor-only) passes in a Linux container
-(`tests/test_iec104_live.py`), joining DNP3 / IEC-61850 on the verified ladder; and a
-callback-signature bug in the client-side station/point **auto-discovery** (added 0.1.4,
-never runnable off-Linux) is fixed so a real outstation's points actually populate.
-**Physical RTU still `待核实`.** Since 0.1.3 the server has
+Current release: **0.1.6** (requires `iaiops>=0.14,<1.0`). New in 0.1.6 — an
+**audit-hardening pass** over the three read-only connectors: DNP3 no longer reports an
+offline outstation as online or returns a partial integrity-poll database; IEC-61850 gained
+a bounded connect/request timeout and stopped fabricating `0.0`/empty-success on failure; the
+substation analyzer no longer calls a lone breaker-open a "selective trip"; tests isolate
+`IAIOPS_HOME`; and the base pin was raised to `iaiops>=0.14` so the governance endpoint-scoping
+fix applies. See `CHANGELOG.md` §0.1.6. (0.1.5 verified the IEC-104 monitor path — a real `c104`
+client↔server round-trip in a Linux container, `tests/test_iec104_live.py`.)
+**Physical RTU/IED still `待核实`.** Since 0.1.3 the server has
 its **own MCP identity** — `iaiops-energy-mcp` runs a dedicated `FastMCP("iaiops-energy")`
 instance with energy-specific instructions (IEC-104 / DNP3 / IEC-61850, read-first,
 no control/operate), with the base cross-protocol brain tools mirrored onto it — plus
