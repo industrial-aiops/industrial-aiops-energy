@@ -128,6 +128,59 @@ def test_label_keyword_inference_when_type_absent() -> None:
 
 
 @pytest.mark.unit
+def test_lone_breaker_open_without_protection_is_not_selective() -> None:
+    """One breaker open but NO protection pickup/trip → never 'selective_trip'."""
+    result = substation.substation_event_analysis(
+        [_ev("BK1", "breaker_open", "2026-07-12T10:00:00Z")]
+    )
+    assert result["verdict"] == "breaker_operation_no_protection"
+    assert result["coordination"]["status"] == "no_protection_record"
+    assert result["breaker_open_count"] == 1
+    assert result["first_protection"] is None
+    assert "no protection" in result["coordination"]["detail"].lower()
+
+
+@pytest.mark.unit
+def test_selective_still_requires_a_protection_event() -> None:
+    """With a protection pickup + one breaker open it IS selective (contrast case)."""
+    result = substation.substation_event_analysis(
+        [
+            _ev("R1", "protection_pickup", "2026-07-12T10:00:00Z"),
+            _ev("R1", "breaker_open", "2026-07-12T10:00:00.080Z"),
+        ]
+    )
+    assert result["verdict"] == "selective_trip"
+
+
+@pytest.mark.unit
+def test_mixed_tz_naive_entries_are_rejected_not_assumed_utc() -> None:
+    """When any event is tz-aware, tz-naive entries are ambiguous → ignored."""
+    result = substation.substation_event_analysis(
+        [
+            _ev("R1", "protection_trip", "2026-07-12T10:00:00+00:00"),  # aware
+            _ev("BK2", "breaker_open", "2026-07-12T10:00:00.300"),      # naive → drop
+        ]
+    )
+    assert result["ignored"] == 1
+    assert result["events_analyzed"] == 1
+    assert result["first_breaker_open"] is None  # the naive open was rejected
+
+
+@pytest.mark.unit
+def test_all_naive_events_still_analyzed() -> None:
+    """A uniformly tz-naive SOE is kept as-is (no spurious rejection)."""
+    result = substation.substation_event_analysis(
+        [
+            _ev("R1", "protection_trip", "2026-07-12T10:00:00"),
+            _ev("R1", "breaker_open", "2026-07-12T10:00:00.080"),
+        ]
+    )
+    assert result["ignored"] == 0
+    assert result["events_analyzed"] == 2
+    assert result["verdict"] == "selective_trip"
+
+
+@pytest.mark.unit
 def test_return_shape_has_all_keys_and_note() -> None:
     result = substation.substation_event_analysis(
         [_ev("R1", "protection_trip", "2026-07-12T10:00:00Z")]

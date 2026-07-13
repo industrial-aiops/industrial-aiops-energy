@@ -7,8 +7,10 @@ database — binary inputs, analog inputs, counters — grouped by type. Control
 (CROB/analog-output) is OT-dangerous and intentionally NOT exposed in this preview.
 
 The opendnp3 binding is callback-heavy and isolated behind the adapter in
-``iaiops.connectors.dnp3.driver`` (待核实 — unverified against a live outstation).
-The ops below work against that adapter's uniform interface and are mock-testable.
+``iaiops_energy.connectors.dnp3.driver``. The binding/API shape is loopback-verified
+against an in-process opendnp3 outstation (see ``tests/test_dnp3_live.py``); a
+PHYSICAL outstation is 待核实. The ops below work against that adapter's uniform
+interface and are mock-testable.
 """
 
 from __future__ import annotations

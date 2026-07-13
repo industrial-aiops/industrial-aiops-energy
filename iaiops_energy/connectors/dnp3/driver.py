@@ -13,8 +13,14 @@ without the package.
 
 from __future__ import annotations
 
+import logging
 import threading
 from typing import Any
+
+# opendnp3 stack logs are routed here (Python logging → stderr / handlers), NEVER
+# stdout: under an stdio MCP transport anything on stdout corrupts the JSON-RPC
+# stream. See :meth:`_Pydnp3MasterAdapter._make_log_handler`.
+_LOG = logging.getLogger("iaiops_energy.connectors.dnp3")
 
 # opendnp3 AddTCPClient's "local adapter" arg = which local interface the OUTBOUND
 # client binds; "any" is the normal default for a client (this is not a server
@@ -76,8 +82,17 @@ def _harvest_collection(values: Any, out: list[dict]) -> None:
     where the inner measurement carries ``.value`` / ``.flags`` / ``.time``).
     """
     name = type(values).__name__.replace("ICollection", "")
-    group = _COLLECTION_GROUP.get(name, 0)
-    mtype = measurement_type(group)
+    if name in _COLLECTION_GROUP:
+        group: int | None = _COLLECTION_GROUP[name]
+        mtype = measurement_type(group)
+    else:
+        # 待核实: the installed pydnp3 may name the typed collection class
+        # differently. Rather than silently mislabel every point as ``group_0``
+        # (a real DNP3 group!), surface a diagnostic so the mismatch is visible.
+        group = None
+        mtype = f"unknown_collection:{type(values).__name__}"
+        _LOG.warning("DNP3: unrecognized opendnp3 collection class %r — "
+                     "point group left unlabeled (待核实)", type(values).__name__)
 
     def _on_item(item: Any) -> None:
         meas = getattr(item, "value", None)
@@ -93,16 +108,32 @@ def _harvest_collection(values: Any, out: list[dict]) -> None:
     values.ForeachItem(_on_item)
 
 
-def _settle(predicate, timeout_s: float, poll_s: float = 0.05) -> bool:
-    """Bounded wait for an async scan to deliver points (never loops forever)."""
+def _settle_scan(
+    count_fn, timeout_s: float, quiet_s: float = 0.2, poll_s: float = 0.05
+) -> None:
+    """Wait for an async integrity scan to *finish* delivering points (bounded).
+
+    opendnp3 delivers each object group (binary / analog / counter …) in a SEPARATE
+    reactor-thread ``ISOEHandler.Process`` callback, so a fragmented response arrives
+    incrementally. Returning as soon as the FIRST point lands would yield a partial
+    database. Instead we wait until the harvested point count stops growing for a
+    quiet interval (``quiet_s``) — a stable count means the fragments stopped
+    arriving — or until ``timeout_s`` elapses. Never loops forever.
+    """
     import time
 
     deadline = time.monotonic() + max(0.0, timeout_s)
+    last_count = -1
+    stable_since = time.monotonic()
     while time.monotonic() < deadline:
-        if predicate():
-            return True
+        current = count_fn()
+        now = time.monotonic()
+        if current != last_count:
+            last_count = current
+            stable_since = now
+        elif current > 0 and (now - stable_since) >= quiet_s:
+            return  # count settled with data present → scan delivery complete
         time.sleep(poll_s)
-    return bool(predicate())
 
 
 class _CollectingSOEHandler:
@@ -142,6 +173,8 @@ class _Pydnp3MasterAdapter:
         # garbage-collected and the reactor-thread callbacks abort the process.
         self._listener: Any = None
         self._soe: Any = None
+        # opendnp3 does not keep the Python log handler alive either — hold a ref.
+        self._log_handler: Any = None
         self._handler = _CollectingSOEHandler()
         self._enabled = False
         # Latest opendnp3 ChannelState delivered via OnStateChange (None until the
@@ -153,9 +186,11 @@ class _Pydnp3MasterAdapter:
         o3, a3 = self._opendnp3, self._asiodnp3
         # A log handler is REQUIRED: opendnp3 logs through it as the stack runs, and a
         # DNP3Manager built without one dereferences a null handler and aborts on
-        # Enable(). asiodnp3.ConsoleLogger is the library's stock handler; the channel
-        # log filter below stays at NORMAL so this is not chatty.
-        self._manager = a3.DNP3Manager(1, a3.ConsoleLogger().Create())
+        # Enable(). We deliberately do NOT use asiodnp3.ConsoleLogger (it writes to
+        # STDOUT, which corrupts the JSON-RPC stream under an stdio MCP transport) —
+        # see :meth:`_make_log_handler`. The channel log filter stays at NORMAL.
+        self._log_handler = self._make_log_handler()
+        self._manager = a3.DNP3Manager(1, self._log_handler)
         self._listener = self._make_channel_listener()
         self._channel = self._manager.AddTCPClient(
             "iaiops", o3.levels.NORMAL, self._asiopal.ChannelRetry().Default(),
@@ -218,6 +253,28 @@ class _Pydnp3MasterAdapter:
 
         return _ChannelListener()
 
+    def _make_log_handler(self) -> Any:
+        """Build an opendnp3 log handler that NEVER writes to stdout.
+
+        Under an stdio MCP transport, anything printed to stdout corrupts the
+        JSON-RPC framing, so opendnp3's stock ``ConsoleLogger`` (stdout sink in the
+        pinned build) is unsafe. When the binding exposes ``openpal.ILogHandler`` we
+        subclass it and route every entry to Python ``logging`` (whose default sink
+        is stderr, never stdout). 待核实: if a binding lacks that base class we fall
+        back to ConsoleLogger and warn — a handler is REQUIRED or ``Enable()`` aborts.
+        """
+        base = getattr(self._openpal, "ILogHandler", None)
+        if base is None:
+            _LOG.warning("DNP3: openpal.ILogHandler missing — falling back to "
+                         "ConsoleLogger, which MAY emit on stdout (待核实)")
+            return self._asiodnp3.ConsoleLogger().Create()
+
+        class _StderrLogHandler(base):  # type: ignore[misc, valid-type]
+            def Log(self, entry: Any) -> None:  # noqa: N802 — opendnp3 name
+                _LOG.debug("opendnp3: %s", getattr(entry, "message", entry))
+
+        return _StderrLogHandler()
+
     def _record_channel_state(self, state: Any) -> None:
         """Store the latest opendnp3 ChannelState (fed by the channel listener)."""
         self._channel_state = state
@@ -230,23 +287,29 @@ class _Pydnp3MasterAdapter:
     def is_online(self) -> bool:
         """Report the live link state from opendnp3's channel callbacks.
 
-        Once OnStateChange has delivered any ChannelState, reflect it (online ==
-        channel OPEN). Before the first callback — or with a binding whose listener
-        never fires — fall back to the enable() latch so behaviour never regresses
-        below "enable() succeeded". 待核实: master link-layer status
-        (IMasterApplication.OnStateChange / LinkStatus) is a deeper, unverified
+        Online ONLY when OnStateChange has delivered ``ChannelState.OPEN``. Before
+        the first callback the link is reported OFFLINE — the ``enable()`` latch is
+        deliberately NOT used as a fallback: ``enable()`` returns synchronously while
+        the TCP channel is still opening on the reactor thread, so trusting it would
+        let :func:`dnp3_session`'s readiness wait return immediately and report an
+        offline outstation as ``online: True`` (the iron rule: an unconfirmed read
+        must not succeed). A binding whose listener never reaches OPEN is therefore
+        honestly reported offline after the wait times out. 待核实: master link-layer
+        status (IMasterApplication.OnStateChange / LinkStatus) is a deeper, unverified
         signal not yet wired; channel state is the verified one.
         """
-        if self._channel_state is not None:
-            return self._channel_is_open()
-        return self._enabled
+        if self._channel_state is None:
+            return False
+        return self._channel_is_open()
 
     def integrity_poll(self, settle_s: float = 2.0) -> list[dict]:
         """Run a Class 0/1/2/3 integrity scan and return the collected points.
 
-        opendnp3 scans are asynchronous (the SOE handler is fed on the reactor
-        thread), so after issuing the scan we wait — bounded by ``settle_s`` — for
-        points to arrive rather than reading the empty list immediately.
+        opendnp3 scans are asynchronous AND fragmented: each object group is fed to
+        the SOE handler in its own reactor-thread callback. So after issuing the scan
+        we wait — bounded by ``settle_s`` — for the harvested count to STOP growing
+        (delivery complete), not merely for the first point to arrive; the latter
+        would return a partial database missing later groups.
         """
         if self._dnpmaster is None:
             return []
@@ -258,7 +321,7 @@ class _Pydnp3MasterAdapter:
         scan = getattr(self._dnpmaster, "ScanClasses", None)
         if callable(scan):
             scan(self._opendnp3.ClassField.AllClasses())
-            _settle(lambda: bool(self._handler.points), settle_s)
+            _settle_scan(lambda: len(self._handler.points), settle_s)
         return list(self._handler.points)
 
     def shutdown(self, timeout_s: float = 5.0) -> None:
