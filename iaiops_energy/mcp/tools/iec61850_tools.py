@@ -3,8 +3,9 @@
 Governed at risk_level='low'. Control blocks (Oper / select-before-operate) are
 intentionally NOT exposed in this preview. The libiec61850 binding is an OPTIONAL
 extra (``pip install iaiops-energy[iec61850]``, linux-only wheel) imported lazily;
-when missing, every tool returns a teaching error dict. Preview — binding/API shape
-unverified against a live IED.
+when missing, every tool returns a teaching error dict. Monitor path is
+loopback-verified against an in-process libiec61850 MMS server; a PHYSICAL IED is
+待核实.
 """
 
 from typing import Optional

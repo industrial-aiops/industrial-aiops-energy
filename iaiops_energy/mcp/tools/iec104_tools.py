@@ -3,8 +3,8 @@
 All tools are governed at risk_level='low' (non-destructive monitor direction).
 Control-direction commands are intentionally NOT exposed in this preview. c104 is
 an OPTIONAL extra (``pip install iaiops-energy[iec104]``) imported lazily; when
-missing, every tool returns a teaching error dict. Preview — binding/API shape
-unverified against a live RTU.
+missing, every tool returns a teaching error dict. Monitor path is loopback-verified
+against an in-process c104 server; a PHYSICAL RTU is 待核实.
 """
 
 from typing import Optional

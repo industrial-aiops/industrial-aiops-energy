@@ -29,7 +29,7 @@ def _build_iec104_client(target: TargetConfig) -> Any:
     except ImportError as exc:  # pragma: no cover — only without c104
         raise OTConnectionError(
             "The 'c104' package is not installed. IEC 60870-5-104 is an OPTIONAL "
-            "extra: 'pip install iaiops[iec104]'.",
+            "extra: 'pip install iaiops-energy[iec104]'.",
             endpoint=target.name,
             protocol="iec104",
         ) from exc
@@ -133,7 +133,7 @@ def _build_dnp3_client(target: TargetConfig) -> Any:
     except ImportError as exc:  # pragma: no cover — only without pydnp3
         raise OTConnectionError(
             "The 'pydnp3' package is not installed. DNP3 is an OPTIONAL extra: "
-            "'pip install iaiops[dnp3]'.",
+            "'pip install iaiops-energy[dnp3]'.",
             endpoint=target.name, protocol="dnp3",
         ) from exc
     if not target.host:
@@ -193,7 +193,8 @@ def _build_iec61850_client(target: TargetConfig) -> Any:
     except ImportError as exc:  # pragma: no cover — only without the binding
         raise OTConnectionError(
             "The 'pyiec61850' (libiec61850 SWIG) binding is not installed. IEC 61850 "
-            "is an OPTIONAL extra: 'pip install iaiops[iec61850]' (linux-only wheel).",
+            "is an OPTIONAL extra: 'pip install iaiops-energy[iec61850]' (linux-only "
+            "wheel).",
             endpoint=target.name, protocol="iec61850",
         ) from exc
     if not target.host:
@@ -208,8 +209,13 @@ def _build_iec61850_client(target: TargetConfig) -> Any:
 
 
 @contextmanager
-def iec61850_session(target: TargetConfig) -> Iterator[Any]:
-    """Connect an IEC 61850 MMS client, yield the adapter, always close."""
+def iec61850_session(target: TargetConfig, *, timeout_s: float = 10.0) -> Iterator[Any]:
+    """Connect an IEC 61850 MMS client, yield the adapter, always close.
+
+    ``timeout_s`` bounds the MMS connect + every request (passed through to the
+    adapter's IedConnection timeouts) so a dead IED cannot hang the worker on the OS
+    default (~75s) — matching the bounded iec104/dnp3 sessions.
+    """
     if target.protocol != "iec61850":
         raise OTConnectionError(
             f"Endpoint '{target.name}' is protocol '{target.protocol}', not iec61850.",
@@ -217,7 +223,7 @@ def iec61850_session(target: TargetConfig) -> Iterator[Any]:
         )
     adapter = _build_iec61850_client(target)
     try:
-        adapter.connect()
+        adapter.connect(timeout_s)
         yield adapter
     except OTConnectionError:
         raise

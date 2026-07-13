@@ -8,10 +8,11 @@ commands (C_SC/C_DC/C_RC/setpoints) are OT-dangerous and intentionally NOT expos
 in this preview.
 
 ``c104`` (iec104-python) is an OPTIONAL extra imported lazily in
-:func:`iaiops.core.runtime.connection._build_iec104_client`. The exact binding
-surface is documented there and is 待核实 (unverified against a live RTU) — the
-ops below duck-type the client/connection/station/point objects so they survive
-minor API differences and are fully mock-testable.
+:func:`iaiops_energy.runtime.sessions._build_iec104_client`. The binding/API shape
+is loopback-verified against an in-process c104 server (see
+``tests/test_iec104_live.py``); a PHYSICAL RTU is 待核实. The ops below duck-type
+the client/connection/station/point objects so they survive minor API differences
+and are fully mock-testable.
 """
 
 from __future__ import annotations
@@ -27,9 +28,20 @@ MAX_POINTS = 5000  # bounded interrogation result
 
 
 def _enum_name(value: Any) -> str:
-    """Render a c104 enum (Type/Quality) or scalar as a bounded string."""
+    """Render a c104 enum (Type/Quality) or scalar as a bounded string.
+
+    A c104 ``Quality`` with value 0 (good, no flags set) is an enum member whose
+    ``.name`` is ``None`` — rendering the raw ``value`` there would collapse "good"
+    to a bare ``"0"``. So when the symbolic ``.name`` is absent but the object is
+    still enum-like, we render its ``str()`` (e.g. ``Quality.0`` / the flag repr)
+    rather than the misleading integer.
+    """
     name = getattr(value, "name", None)
-    return s(name if name is not None else value, 48)
+    if name:
+        return s(name, 48)
+    if hasattr(value, "value"):  # enum/flag member whose zero value has name None
+        return s(str(value), 48)
+    return s(value, 48)
 
 
 def _point_brief(point: Any) -> dict:
@@ -72,7 +84,11 @@ def iec104_connection_info(target: Any) -> dict:
         _interrogate(conn, _configured_ca(target))
         stations = _stations(conn)
         cas = [ca for ca in (_station_ca(st) for st in stations) if ca is not None]
-        connected = bool(getattr(conn, "is_connected", True))
+        # Fail-safe: default FALSE when the attribute is absent. Defaulting True would
+        # report a link as connected merely because the c104 binding names the flag
+        # differently — a fabricated "up" status. 待核实: c104 Connection exposes the
+        # boolean as ``is_connected`` in the pinned build; verify on a version bump.
+        connected = bool(getattr(conn, "is_connected", False))
     return {
         "endpoint": s(getattr(target, "name", ""), 64),
         "host": s(getattr(target, "host", ""), 40),

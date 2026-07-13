@@ -139,6 +139,79 @@ def test_is_online_reflects_channel_state_change():
 
 
 @pytest.mark.unit
+def test_integrity_poll_waits_for_all_fragmented_groups():
+    """opendnp3 delivers each object group in a SEPARATE reactor callback; the poll
+    must wait for delivery to settle, not return on the first point (partial DB)."""
+    import threading
+    import time
+
+    adapter, o3 = _adapter_with_fake_opendnp3()
+    o3.ClassField = types.SimpleNamespace(AllClasses=lambda: "all")
+
+    def _deliver() -> None:
+        for grp, mtype in ((1, "binary_input"), (30, "analog_input"), (20, "counter")):
+            time.sleep(0.05)
+            adapter._handler.points.append(
+                {"group": grp, "type": mtype, "index": 0, "value": 1,
+                 "quality": "", "timestamp": ""})
+
+    class _FakeMaster:
+        def ScanClasses(self, field):  # noqa: N802 — opendnp3 name
+            threading.Thread(target=_deliver, daemon=True).start()
+
+    adapter._dnpmaster = _FakeMaster()
+    points = adapter.integrity_poll(settle_s=3.0)
+    # All three groups present — NOT just the first fragment.
+    assert {p["type"] for p in points} == {"binary_input", "analog_input", "counter"}
+    assert len(points) == 3
+
+
+@pytest.mark.unit
+def test_harvest_unknown_collection_class_is_flagged_not_mislabeled():
+    """An unrecognized pybind11 collection class must NOT collapse to group_0."""
+    from iaiops_energy.connectors.dnp3.driver import _harvest_collection
+
+    class ICollectionFooBar:
+        def ForeachItem(self, cb):  # noqa: N802 — opendnp3 name
+            cb(types.SimpleNamespace(
+                index=0, value=types.SimpleNamespace(value=1, flags="", time="")))
+
+    out: list[dict] = []
+    _harvest_collection(ICollectionFooBar(), out)
+    assert out[0]["group"] is None
+    assert out[0]["type"].startswith("unknown_collection:")
+
+
+@pytest.mark.unit
+def test_harvest_known_collection_maps_group_and_value():
+    from iaiops_energy.connectors.dnp3.driver import _harvest_collection
+
+    class ICollectionIndexedAnalog:
+        def ForeachItem(self, cb):  # noqa: N802 — opendnp3 name
+            cb(types.SimpleNamespace(
+                index=2, value=types.SimpleNamespace(value=120.5, flags="ONLINE", time="")))
+
+    out: list[dict] = []
+    _harvest_collection(ICollectionIndexedAnalog(), out)
+    assert out[0]["group"] == 30
+    assert out[0]["type"] == "analog_input"
+    assert out[0]["index"] == 2
+    assert out[0]["value"] == 120.5
+
+
+@pytest.mark.unit
+def test_log_handler_never_writes_to_stdout(capsys):
+    """The opendnp3 log handler must route to logging (stderr), never stdout —
+    stdout under an stdio MCP transport corrupts the JSON-RPC stream."""
+    adapter, _ = _adapter_with_fake_opendnp3()
+    adapter._openpal = types.SimpleNamespace(ILogHandler=object)
+    handler = adapter._make_log_handler()
+    handler.Log(types.SimpleNamespace(message="opendnp3 stack log line"))
+    captured = capsys.readouterr()
+    assert captured.out == ""
+
+
+@pytest.mark.unit
 def test_channel_listener_forwards_state_to_is_online():
     """The IChannelListener built for opendnp3 feeds OnStateChange into is_online()."""
     adapter, o3 = _adapter_with_fake_opendnp3()
@@ -148,9 +221,30 @@ def test_channel_listener_forwards_state_to_is_online():
 
 
 @pytest.mark.unit
-def test_is_online_falls_back_to_enable_latch_before_callback():
-    """Before any channel callback, is_online() honours the enable() latch."""
+def test_is_online_offline_until_channel_open_even_when_enabled():
+    """The enable() latch must NOT report online before OnStateChange fires.
+
+    enable() returns synchronously while the TCP channel is still opening on the
+    reactor thread; trusting it would let the readiness wait pass and report an
+    offline outstation as online (iron rule). Online requires ChannelState.OPEN.
+    """
     adapter, _ = _adapter_with_fake_opendnp3()
     assert adapter.is_online() is False
     adapter._enabled = True  # simulate enable() having run, no callback yet
-    assert adapter.is_online() is True
+    assert adapter.is_online() is False  # still offline — no OPEN callback yet
+
+
+@pytest.mark.unit
+def test_listener_never_reaching_open_is_reported_offline_after_wait():
+    """An outstation whose listener never reaches OPEN is offline after the wait.
+
+    Mirrors dnp3_session's readiness wait: with a listener that only ever delivers
+    CLOSED (or nothing), _wait_until genuinely times out and reports offline rather
+    than passing on the enable() latch.
+    """
+    from iaiops_energy.runtime.sessions import _wait_until
+
+    adapter, o3 = _adapter_with_fake_opendnp3()
+    adapter._enabled = True
+    adapter._record_channel_state(o3.ChannelState.CLOSED)  # never OPEN
+    assert _wait_until(adapter.is_online, 0.2) is False
