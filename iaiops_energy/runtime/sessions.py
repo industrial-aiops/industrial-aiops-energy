@@ -41,9 +41,36 @@ def _build_iec104_client(target: TargetConfig) -> Any:
             protocol="iec104",
         )
     client = c104.Client()
+    _register_iec104_discovery(client)
     init = getattr(getattr(c104, "Init", None), "INTERROGATION", None)
     conn = client.add_connection(ip=target.host, port=target.port or 2404, init=init)
     return client, conn
+
+
+def _register_iec104_discovery(client: Any) -> None:
+    """Auto-add unknown stations/points the RTU reports, so a general interrogation
+    populates the client model (the documented ``c104`` discovery pattern).
+
+    Monitor direction only — this mirrors the RTU's *monitored* points; no control
+    point is ever created client-side. Best-effort: a binding that lacks these
+    handlers (or an older API) simply skips registration.
+    """
+    on_new_station = getattr(client, "on_new_station", None)
+    on_new_point = getattr(client, "on_new_point", None)
+
+    if callable(on_new_station):
+
+        def _add_station(client: Any, connection: Any, common_address: int) -> None:
+            connection.add_station(common_address=common_address)
+
+        on_new_station(callable=_add_station)
+
+    if callable(on_new_point):
+
+        def _add_point(client: Any, station: Any, io_address: int, point_type: Any) -> None:
+            station.add_point(io_address=io_address, type=point_type)
+
+        on_new_point(callable=_add_point)
 
 
 @contextmanager

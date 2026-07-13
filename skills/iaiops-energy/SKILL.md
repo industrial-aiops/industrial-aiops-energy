@@ -135,7 +135,7 @@ base `iaiops` skill for the full brain reference.
 
 | Protocol | Lib pin (this release) | Spec / transport | Verification status |
 | --- | --- | --- | --- |
-| IEC 60870-5-104 | `c104>=2.0,<3` | IEC 60870-5-104 over TCP/2404 | **loopback-verified** (real c104 link via `iec104_session`); live RTU 待核实 |
+| IEC 60870-5-104 | `c104>=2.0,<3` | IEC 60870-5-104 over TCP/2404 | **preview (待核实)** — codec/API surface only; in-process c104 server-loopback test scaffolded (`tests/test_iec104_live.py`) but skips until `c104` builds on Linux (no macOS wheel); live RTU 待核实 |
 | DNP3 / IEEE 1815 | `pydnp3>=0.1,<1` | IEEE 1815, TCP; monitor direction only | **verified (monitor path)** — real master↔outstation round-trip vs a live opendnp3 outstation in Docker/Linux; physical RTU 待核实 |
 | IEC 61850 MMS | `pyiec61850>=1.5.2a1,<2` (linux-only wheel) | MMS over ISO-on-TCP/102; no GOOSE/SV | **verified (monitor path)** — real client↔server round-trip vs an in-process libiec61850 MMS server in Docker/Linux; physical IED 待核实 |
 
