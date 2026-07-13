@@ -123,8 +123,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [0.1.2] - 2026-07-01
 
-Summarized from `RELEASE-0.1.2.md`.
-
 ### Added
 
 - CI quality gate (mirrors the base repo): `pytest` (25 mock-based unit tests) +
