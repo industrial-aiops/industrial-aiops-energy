@@ -7,6 +7,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.5] — 2026-07-13
+
+> **IEC-104 promoted to `verified (monitor path)` + a real connector fix.** The `c104`
+> client↔server round-trip now **passes in a Linux container** (`tests/test_iec104_live.py`),
+> so IEC-104 joins DNP3 / IEC-61850 on the verified ladder (physical RTU still `待核实`).
+> Getting there exposed a genuine bug shipped in 0.1.4: the client-side station/point
+> **auto-discovery callbacks** (and the test server's `on_receive_raw` callback) were annotated
+> `Any` / stringized by `from __future__ import annotations`, which `c104` **strictly rejects**
+> — so discovery would have failed against any real c104 RTU. Fixed by setting the exact
+> `c104`-expected signatures (`(client: c104.Client, connection: c104.Connection, common_address: int)`
+> etc.) as real objects. No API change; monitor-only preserved. README + skill matrix flipped to
+> verified. The existing CI (`pip install -e .[iec104,dev]` + `pytest -q`, integration not
+> deselected) now runs this round-trip on every push.
+
 ## [0.1.4] — 2026-07-13
 
 > **IEC-104 verification scaffolding + a real monitor-path fix.** Adds the in-process
