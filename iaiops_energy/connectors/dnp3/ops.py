@@ -39,9 +39,16 @@ def _point_brief(p: dict) -> dict:
 
 
 def dnp3_link_status(target: Any) -> dict:
-    """[READ] Bring the master online and report the link/outstation status."""
+    """[READ] Bring the master online and report the link/outstation status.
+
+    ``online`` is the verified channel-state reading; ``link_layer`` adds the
+    deeper master-application signals (keep-alive/link result + whether any IIN
+    bits were seen) when the pydnp3 build exposes ``IMasterApplication`` — 待核实
+    against a live outstation.
+    """
     with dnp3_session(target) as adapter:
         online = bool(adapter.is_online())
+        link_layer = adapter.link_status() if hasattr(adapter, "link_status") else None
     return {
         "endpoint": s(getattr(target, "name", ""), 64),
         "host": s(getattr(target, "host", ""), 40),
@@ -49,8 +56,9 @@ def dnp3_link_status(target: Any) -> dict:
         "outstation_address": int(getattr(target, "unit_id", 0) or 0),
         "master_address": int(getattr(target, "master_address", 0) or 1),
         "online": online,
-        "note": "DNP3 read-only link check. Control (CROB / analog output) is not "
-        "exposed in this preview.",
+        "link_layer": link_layer,
+        "note": "DNP3 read-only link check (channel state + master link-layer "
+        "signals). Control (CROB / analog output) is not exposed in this preview.",
     }
 
 
