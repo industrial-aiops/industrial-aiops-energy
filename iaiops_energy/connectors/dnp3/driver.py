@@ -205,6 +205,12 @@ class _Pydnp3MasterAdapter:
         # Latest opendnp3 ChannelState delivered via OnStateChange (None until the
         # first callback arrives); drives is_online() for a live link reading.
         self._channel_state: Any = None
+        # Master-application link-layer signals (deeper than channel state): the
+        # keep-alive/link-status result and the last outstation IIN bits, recorded
+        # by the custom IMasterApplication. None until the first callback.
+        self._link_status: Any = None
+        self._last_iin: Any = None
+        self._app: Any = None  # hold a ref (opendnp3 does not keep it alive)
 
     def enable(self) -> None:
         """Open the channel + master and enable it (begins outstation link)."""
@@ -230,12 +236,8 @@ class _Pydnp3MasterAdapter:
         stack.link.LocalAddr = self._master
         stack.link.RemoteAddr = self._outstation
         self._soe = self._make_soe()
-        self._dnpmaster = self._channel.AddMaster(
-            "master",
-            self._soe,
-            self._asiodnp3.DefaultMasterApplication().Create(),
-            stack,
-        )
+        self._app = self._make_master_application()
+        self._dnpmaster = self._channel.AddMaster("master", self._soe, self._app, stack)
         self._dnpmaster.Enable()
         self._enabled = True
 
@@ -309,9 +311,68 @@ class _Pydnp3MasterAdapter:
 
         return _StderrLogHandler()
 
+    def _make_master_application(self) -> Any:
+        """Build an IMasterApplication that records master link-layer signals.
+
+        Deeper than channel state: the master application receives the outstation's
+        link-layer keep-alive result (``OnKeepAliveResult`` → ``LinkStatus``) and
+        every response's IIN bits (``OnReceiveIIN``). Recording them lets
+        :meth:`link_status` report the real master↔outstation link health, not just
+        that the TCP channel opened. 待核实: exact callback names/signatures vary by
+        pydnp3 build — we subclass ``asiodnp3.IMasterApplication`` when present and
+        defensively record whatever the callbacks deliver; when the base class is
+        missing we fall back to ``DefaultMasterApplication`` (channel-state only),
+        keeping the module importable / mock-testable without pydnp3.
+        """
+        base = getattr(self._asiodnp3, "IMasterApplication", None)
+        if base is None:
+            return self._asiodnp3.DefaultMasterApplication().Create()
+        record_link = self._record_link_status
+        record_iin = self._record_iin
+
+        class _MasterApp(base):  # type: ignore[misc, valid-type]
+            def OnKeepAliveSuccess(self, *a: Any) -> None:  # noqa: N802 — opendnp3 name
+                record_link("SUCCESS")
+
+            def OnKeepAliveFailure(self, *a: Any) -> None:  # noqa: N802 — opendnp3 name
+                record_link("FAILURE")
+
+            def OnKeepAliveResult(self, result: Any) -> None:  # noqa: N802 — opendnp3 name
+                record_link(result)
+
+            def OnReceiveIIN(self, iin: Any) -> None:  # noqa: N802 — opendnp3 name
+                record_iin(iin)
+
+        return _MasterApp()
+
     def _record_channel_state(self, state: Any) -> None:
         """Store the latest opendnp3 ChannelState (fed by the channel listener)."""
         self._channel_state = state
+
+    def _record_link_status(self, status: Any) -> None:
+        """Store the latest master keep-alive/link-status (fed by the master app)."""
+        self._link_status = status
+
+    def _record_iin(self, iin: Any) -> None:
+        """Store the outstation's last IIN bits (fed by OnReceiveIIN)."""
+        self._last_iin = iin
+
+    def link_status(self) -> dict:
+        """Master link-layer health from IMasterApplication callbacks (no I/O).
+
+        Returns ``{channel_open, link_keepalive, iin_seen}`` — the verified channel
+        state plus the deeper master-application signals (None until their first
+        callback; a build without IMasterApplication reports them None and relies on
+        channel state). Pure accessor over recorded callback state.
+        """
+        keepalive = self._link_status
+        return {
+            "channel_open": self._channel_is_open(),
+            "link_keepalive": None
+            if keepalive is None
+            else str(getattr(keepalive, "name", keepalive))[:32],
+            "iin_seen": self._last_iin is not None,
+        }
 
     def _channel_is_open(self) -> bool:
         """True when the recorded channel state is opendnp3 ``ChannelState.OPEN``."""
@@ -328,9 +389,10 @@ class _Pydnp3MasterAdapter:
         let :func:`dnp3_session`'s readiness wait return immediately and report an
         offline outstation as ``online: True`` (the iron rule: an unconfirmed read
         must not succeed). A binding whose listener never reaches OPEN is therefore
-        honestly reported offline after the wait times out. 待核实: master link-layer
-        status (IMasterApplication.OnStateChange / LinkStatus) is a deeper, unverified
-        signal not yet wired; channel state is the verified one.
+        honestly reported offline after the wait times out. The deeper master
+        link-layer signals (IMasterApplication keep-alive + IIN) are now wired and
+        surfaced by :meth:`link_status`; channel state stays the primary online
+        signal. 待核实: exact IMasterApplication callback names vary by pydnp3 build.
         """
         if self._channel_state is None:
             return False
