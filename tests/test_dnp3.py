@@ -32,6 +32,9 @@ class _FakeAdapter:
     def is_online(self):
         return self._online
 
+    def link_status(self):
+        return {"channel_open": self._online, "link_keepalive": None, "iin_seen": False}
+
     def integrity_poll(self):
         return list(self._points)
 
@@ -90,6 +93,8 @@ def test_link_status(outstation):
     assert out["online"] is True
     assert out["outstation_address"] == 4
     assert out["master_address"] == 1
+    # master link-layer signals surfaced alongside the channel-state reading
+    assert out["link_layer"] == {"channel_open": True, "link_keepalive": None, "iin_seen": False}
 
 
 @pytest.mark.unit
@@ -166,6 +171,42 @@ def test_is_online_reflects_channel_state_change():
     # Channel drops (CLOSED) → is_online reflects it immediately.
     adapter._record_channel_state(o3.ChannelState.CLOSED)
     assert adapter.is_online() is False
+
+
+@pytest.mark.unit
+def test_link_status_records_master_application_signals():
+    """link_status() surfaces the master keep-alive result + IIN sightings recorded
+    by the IMasterApplication callbacks, on top of the channel-state reading."""
+    adapter, o3 = _adapter_with_fake_opendnp3()
+    # Nothing yet: channel closed, no keep-alive, no IIN.
+    assert adapter.link_status() == {
+        "channel_open": False,
+        "link_keepalive": None,
+        "iin_seen": False,
+    }
+    # Channel opens + the master app records a keep-alive result and an IIN response.
+    adapter._record_channel_state(o3.ChannelState.OPEN)
+    adapter._record_link_status(types.SimpleNamespace(name="SUCCESS"))
+    adapter._record_iin(object())
+    assert adapter.link_status() == {
+        "channel_open": True,
+        "link_keepalive": "SUCCESS",
+        "iin_seen": True,
+    }
+
+
+@pytest.mark.unit
+def test_master_application_falls_back_without_base_class():
+    """A pydnp3 build lacking IMasterApplication → DefaultMasterApplication (no crash)."""
+    created = {}
+    adapter, _ = _adapter_with_fake_opendnp3()
+    adapter._asiodnp3 = types.SimpleNamespace(
+        DefaultMasterApplication=lambda: types.SimpleNamespace(
+            Create=lambda: created.setdefault("default", object())
+        )
+    )
+    app = adapter._make_master_application()
+    assert app is created["default"]
 
 
 @pytest.mark.unit
