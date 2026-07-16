@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- **DNP3 master link-layer status** — a custom `IMasterApplication` records the keep-alive
+  result (`OnKeepAliveSuccess`/`Failure`/`Result`) and the outstation's IIN bits
+  (`OnReceiveIIN`); `dnp3_link_status` now surfaces
+  `link_layer = {channel_open, link_keepalive, iin_seen}` alongside the verified channel-state
+  `online` reading. Falls back to `DefaultMasterApplication` on pydnp3 builds without the base
+  class. Live outstation `待核实`.
+
 ## [0.1.6] — 2026-07-13
 
 > **Audit-hardening release.** A focused audit (correctness · security/governance · tests ·
