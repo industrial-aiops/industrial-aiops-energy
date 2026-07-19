@@ -315,7 +315,7 @@ wheels = [
 
 [[package]]
 name = "iaiops"
-version = "0.10.1"
+version = "0.16.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "cryptography" },
@@ -325,14 +325,14 @@ dependencies = [
     { name = "rich" },
     { name = "typer" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/05/3a/5f423c482f6cfcd58cb21154fb95893869c58a0b4f649598b26caa36b183/iaiops-0.10.1.tar.gz", hash = "sha256:9aaaa8177b6377fda6a7355f2998107f62b02207b33e7d5e22731bc4cbacbba4", size = 657900, upload-time = "2026-07-10T05:32:50.079Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/17/15/f53e545b0a9075a3139786318b13daa3ab8fe353f7d0517f6a0449a2513b/iaiops-0.16.0.tar.gz", hash = "sha256:d5745719e5c6bdc58d87821aa3318264f8f5eeb8cdc3822f17936395699ba382", size = 936718, upload-time = "2026-07-17T05:12:22.934Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/07/f9/d6013b3cdd67c9752934a4ef19e52249947d12063373283caed88ab6ee61/iaiops-0.10.1-py3-none-any.whl", hash = "sha256:8070f9809f9a787dca8ba30185c74b066ce287707c67cf16760451a81704969e", size = 441360, upload-time = "2026-07-10T05:32:48.104Z" },
+    { url = "https://files.pythonhosted.org/packages/fe/41/a95f0461ce8b98318b741305ef8a4a3e727ef06f19f8358e1d89def9cd01/iaiops-0.16.0-py3-none-any.whl", hash = "sha256:26cb04a3e7dfad874bb8ad8318a70c9dd3252882722fbfebc900837d6cf51623", size = 618015, upload-time = "2026-07-17T05:12:20.774Z" },
 ]
 
 [[package]]
 name = "iaiops-energy"
-version = "0.1.5"
+version = "0.1.6"
 source = { editable = "." }
 dependencies = [
     { name = "iaiops" },
@@ -363,7 +363,7 @@ iec61850 = [
 requires-dist = [
     { name = "bandit", marker = "extra == 'dev'", specifier = ">=1.7" },
     { name = "c104", marker = "extra == 'iec104'", specifier = ">=2.0,<3" },
-    { name = "iaiops", specifier = ">=0.9,<1.0" },
+    { name = "iaiops", specifier = ">=0.14,<1.0" },
     { name = "iaiops-energy", extras = ["dnp3"], marker = "extra == 'energy'" },
     { name = "iaiops-energy", extras = ["iec104"], marker = "extra == 'energy'" },
     { name = "iaiops-energy", extras = ["iec61850"], marker = "extra == 'energy'" },

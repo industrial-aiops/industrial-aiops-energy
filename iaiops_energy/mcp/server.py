@@ -17,11 +17,16 @@ registered tool lacks the ``_is_governed_tool`` harness marker.
 from __future__ import annotations
 
 import importlib
+import logging
 
 from mcp_server import _shared as _base_shared
+from mcp_server.noegress import NO_EGRESS_ENV, apply_no_egress, no_egress_active
 from mcp_server.profiles import BRAIN_MODULES
+from mcp_server.readonly import READ_ONLY_ENV, apply_read_only, read_only_active
 
 from iaiops_energy.mcp._app import mcp
+
+logger = logging.getLogger(__name__)
 
 # The energy edition's protocol tool modules (this package). ``substation_tools``
 # is a pure, monitor-only SOE analysis tool (no live protocol I/O / no endpoint).
@@ -81,8 +86,39 @@ def assert_all_tools_governed() -> None:
 
 
 def main() -> None:
-    """Register the energy tool set, verify governance, and run it (stdio)."""
+    """Register the energy tool set, apply the posture gates, verify, and run it.
+
+    ``IAIOPS_READ_ONLY=1`` / ``IAIOPS_NO_EGRESS=1`` are honoured here with the
+    base server's semantics and ordering: narrowing runs AFTER registration
+    (importing a module is what registers, and registration can only widen) and
+    BEFORE the governance assertion.
+
+    This edition owns no write and no egress tools — every energy connector is
+    monitor-only. The gates matter anyway, and precisely because of that: the
+    base brain tools mirrored in by ``_mount_base_brain_tools`` include
+    ``historian_push``, ``rca_narrate`` and the ``stream_publish*`` pair. Before
+    these two lines existed the switches were silently ineffective here, which
+    on a 变电/电力 site is worse than not offering them at all.
+    """
     register()
+    if read_only_active():
+        withheld = apply_read_only(mcp)
+        logger.info(
+            "%s is on — %d write tool(s) withheld from list_tools(): %s.",
+            READ_ONLY_ENV,
+            len(withheld),
+            ", ".join(withheld) or "none",
+        )
+    if no_egress_active():
+        withheld = apply_no_egress(mcp)
+        logger.info(
+            "%s is on — %d data-shipping tool(s) withheld from list_tools(): %s. "
+            "This gates MCP tools only; `iaiops audit forward` is a CLI path no "
+            "registry gate can reach.",
+            NO_EGRESS_ENV,
+            len(withheld),
+            ", ".join(withheld) or "none",
+        )
     assert_all_tools_governed()
     mcp.run()
 

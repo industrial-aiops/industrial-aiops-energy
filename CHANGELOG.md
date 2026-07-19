@@ -7,6 +7,36 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+- **`IAIOPS_READ_ONLY` / `IAIOPS_NO_EGRESS` were silently ineffective on this server.**
+  The base package added both registration-time gates in `iaiops` 0.17.0, but this
+  edition runs its **own** `FastMCP` instance and its `main()` applied neither — so an
+  operator setting either variable on `iaiops-energy-mcp` got no guarantee while
+  believing they had one. Verified against the real registry before the fix: 59 tools
+  registered, with both variables set `historian_push`, `rca_narrate`, `stream_publish`
+  and `stream_publish_event` all remained exposed. Now 59 → 55 with both on, and the
+  governance assertion still passes.
+
+  This edition owns no write and no egress tools — every energy connector is
+  monitor-only — and that is exactly what made the hole easy to miss: the write count
+  read as zero because there was nothing to withhold, not because the gate ran. What
+  leaked were the **base brain tools mirrored in** by `_mount_base_brain_tools`. On a
+  变电/电力 site, where the compliance expectation is highest, a switch believed to be
+  on is worse than one known to be absent.
+
+  Gates are applied with the base server's ordering — after registration (importing a
+  module is what registers, and registration can only widen) and before the governance
+  assertion. `tests/test_gates.py` pins the behaviour against the **derived** write /
+  egress sets rather than a hard-coded tool list, so a future base release that adds an
+  egress tool is covered here the day it lands; it also asserts `main()` actually calls
+  the gates, since the defect was precisely that they were importable and documented but
+  never wired.
+
+### Changed
+- Base pin raised to **`iaiops>=0.17`** — the gate modules (`mcp_server.readonly`,
+  `mcp_server.noegress`) and the `@governed_tool(egress=…)` metadata they read only exist
+  from that release.
+
 ### Added
 - **DNP3 master link-layer status** — a custom `IMasterApplication` records the keep-alive
   result (`OnKeepAliveSuccess`/`Failure`/`Result`) and the outstation's IIN bits

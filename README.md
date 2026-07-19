@@ -16,7 +16,16 @@ normalized ISA-95/18.2 model), and MCP server infrastructure — this repo only 
 the three energy connectors + their session builders + MCP tools. Read-first: no
 control-direction writes are exposed.
 
-Current release: **0.1.6** (requires `iaiops>=0.14,<1.0`). New in 0.1.6 — an
+Current release: **0.1.7** (requires `iaiops>=0.17,<1.0`). New in 0.1.7 — this server now
+honours the base **posture gates**: `IAIOPS_READ_ONLY=1` and `IAIOPS_NO_EGRESS=1` withhold
+write / data-shipping tools from `list_tools()` at registration time, so a weak or local
+model cannot call what it cannot see. Both were **silently ineffective here before 0.1.7** —
+this edition runs its own `FastMCP` instance and applied neither, so `IAIOPS_NO_EGRESS=1`
+still exposed `historian_push`, `rca_narrate` and the `stream_publish*` pair mirrored in
+from the base brain (59 tools → 55 with both gates on today). The energy connectors
+themselves are monitor-only and survive both gates intact. See `CHANGELOG.md` §Unreleased.
+
+Previously in 0.1.6 — an
 **audit-hardening pass** over the three read-only connectors: DNP3 no longer reports an
 offline outstation as online or returns a partial integrity-poll database; IEC-61850 gained
 a bounded connect/request timeout and stopped fabricating `0.0`/empty-success on failure; the
