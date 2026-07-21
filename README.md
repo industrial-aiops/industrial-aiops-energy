@@ -16,14 +16,16 @@ normalized ISA-95/18.2 model), and MCP server infrastructure — this repo only 
 the three energy connectors + their session builders + MCP tools. Read-first: no
 control-direction writes are exposed.
 
-Current release: **0.1.7** (requires `iaiops>=0.17,<1.0`). New in 0.1.7 — this server now
-honours the base **posture gates**: `IAIOPS_READ_ONLY=1` and `IAIOPS_NO_EGRESS=1` withhold
-write / data-shipping tools from `list_tools()` at registration time, so a weak or local
-model cannot call what it cannot see. Both were **silently ineffective here before 0.1.7** —
-this edition runs its own `FastMCP` instance and applied neither, so `IAIOPS_NO_EGRESS=1`
-still exposed `historian_push`, `rca_narrate` and the `stream_publish*` pair mirrored in
-from the base brain (59 tools → 55 with both gates on today). The energy connectors
-themselves are monitor-only and survive both gates intact. See `CHANGELOG.md` §Unreleased.
+Current release: **0.1.8** (requires `iaiops>=0.19,<1.0`). New in 0.1.8 — the base
+`IAIOPS_READ_ONLY` gate was **removed** in iaiops 0.19.0 (read/write authorisation is the
+caller's decision — agent judgement / account management — not the tap's; every tool is
+governed and audited via the base `@governed_tool` harness), so this edition drops it too.
+It keeps the **`IAIOPS_NO_EGRESS=1`** gate — a data-exfiltration / airgap axis that withholds
+data-shipping tools from `list_tools()` at registration time. This edition runs its own
+`FastMCP` instance, so the gate is wired into its own `main()`; without it `IAIOPS_NO_EGRESS=1`
+would still expose `historian_push`, `rca_narrate` and the `stream_publish*` pair mirrored in
+from the base brain. The energy connectors themselves are monitor-only and survive the gate
+intact. See `CHANGELOG.md`.
 
 Previously in 0.1.6 — an
 **audit-hardening pass** over the three read-only connectors: DNP3 no longer reports an
