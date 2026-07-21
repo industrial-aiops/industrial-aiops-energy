@@ -22,7 +22,6 @@ import logging
 from mcp_server import _shared as _base_shared
 from mcp_server.noegress import NO_EGRESS_ENV, apply_no_egress, no_egress_active
 from mcp_server.profiles import BRAIN_MODULES
-from mcp_server.readonly import READ_ONLY_ENV, apply_read_only, read_only_active
 
 from iaiops_energy.mcp._app import mcp
 
@@ -86,29 +85,25 @@ def assert_all_tools_governed() -> None:
 
 
 def main() -> None:
-    """Register the energy tool set, apply the posture gates, verify, and run it.
+    """Register the energy tool set, apply the no-egress gate, verify, and run it.
 
-    ``IAIOPS_READ_ONLY=1`` / ``IAIOPS_NO_EGRESS=1`` are honoured here with the
-    base server's semantics and ordering: narrowing runs AFTER registration
-    (importing a module is what registers, and registration can only widen) and
-    BEFORE the governance assertion.
+    ``IAIOPS_NO_EGRESS=1`` is honoured here with the base server's semantics and
+    ordering: narrowing runs AFTER registration (importing a module is what
+    registers, and registration can only widen) and BEFORE the governance
+    assertion.
 
     This edition owns no write and no egress tools — every energy connector is
-    monitor-only. The gates matter anyway, and precisely because of that: the
-    base brain tools mirrored in by ``_mount_base_brain_tools`` include
+    monitor-only. The no-egress gate matters anyway, and precisely because of
+    that: the base brain tools mirrored in by ``_mount_base_brain_tools`` include
     ``historian_push``, ``rca_narrate`` and the ``stream_publish*`` pair. Before
-    these two lines existed the switches were silently ineffective here, which
-    on a 变电/电力 site is worse than not offering them at all.
+    this line existed the switch was silently ineffective here, which on a
+    变电/电力 site is worse than not offering it at all. (Read/write
+    authorisation is not this tap's job — it is the caller's; every tool is
+    governed and audited via the base ``@governed_tool`` harness. The base's
+    ``IAIOPS_READ_ONLY`` gate was removed in iaiops 0.19.0; this edition drops it
+    too and keeps only the data-exfiltration / airgap axis.)
     """
     register()
-    if read_only_active():
-        withheld = apply_read_only(mcp)
-        logger.info(
-            "%s is on — %d write tool(s) withheld from list_tools(): %s.",
-            READ_ONLY_ENV,
-            len(withheld),
-            ", ".join(withheld) or "none",
-        )
     if no_egress_active():
         withheld = apply_no_egress(mcp)
         logger.info(

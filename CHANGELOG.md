@@ -5,6 +5,28 @@ All notable changes to `iaiops-energy` are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.1.8] — 2026-07-21
+
+> **Aligned with iaiops 0.19.0: the `IAIOPS_READ_ONLY` gate is removed.** Read/write
+> authorisation is not the data tap's job — it belongs to the caller (agent judgement /
+> account & permission management). The base package removed the `IAIOPS_READ_ONLY`
+> registration gate in 0.19.0 and made un-bypassable audit (via `@governed_tool`) the
+> guarantee instead; this edition drops the gate too. It also **must** — this edition
+> imported `mcp_server.readonly`, which no longer exists, so `iaiops>=0.19` requires this
+> change to import at all.
+
+### Removed
+- **`IAIOPS_READ_ONLY` gate.** Dropped the `apply_read_only` wiring from `main()`, the
+  `IAIOPS_READ_ONLY` declaration from `server.json`, and the read-only assertions from
+  `tests/test_gates.py`. `IAIOPS_NO_EGRESS` is untouched (a separate data-exfiltration /
+  airgap axis). Every energy connector remains monitor-only and governed/audited by the
+  base `@governed_tool` harness.
+
+### Changed
+- **Pin bumped to `iaiops>=0.19,<1.0`** (was `>=0.17`). 0.19.0 removed `mcp_server/readonly.py`,
+  so the prior pin range no longer imports. 0.19.0 also adds effect-based write risk
+  (`preview_param`); this edition has no write tools, so nothing to opt in.
+
 ## [Unreleased]
 
 ### Fixed
