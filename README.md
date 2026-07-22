@@ -92,9 +92,15 @@ OT-domain app**), deployable as an OCI **Managed Container** (outbound-only to s
 no inbound). A container + `margo.org/v1-alpha1` application-description skeleton is in
 [`deploy/margo/`](deploy/margo/); the full alignment + honest gap analysis lives in the base repo's
 [`docs/MARGO-ALIGNMENT.md`](https://github.com/industrial-aiops/industrial-aiops/blob/main/docs/MARGO-ALIGNMENT.md).
+The descriptor is validated against Margo's published `margo.org/v1-alpha1` LinkML schema on every
+PR (CI job `margo-descriptor`) and passes clean — structural validity only, see
+[`deploy/margo/schema/PROVENANCE.md`](deploy/margo/schema/PROVENANCE.md).
+
 > **Honest status:** a natural Margo edge application, but **NOT Margo-compliant yet** — image build,
 > hosted+signed package, and a published conformance result are roadmap `⏳`. No claim of compliance
-> until that result exists.
+> until that result exists, and the schema pass above is **not** a step toward it: the compliance
+> test suite cannot be run today because it does not exist yet (no conformance repo in the `margo`
+> org; a first PR1 vertical slice was still being scoped as of 2026-01-15).
 
 ## Validation status (honest)
 

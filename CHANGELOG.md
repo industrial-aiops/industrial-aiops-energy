@@ -5,6 +5,22 @@ All notable changes to `iaiops-energy` are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+
+- **Margo descriptor schema gate** (CI job `margo-descriptor`, `scripts/margo_validate.sh`),
+  mirroring the base repo. `deploy/margo/margo.yaml` is machine-read by an orchestrator we do
+  not control and nothing validated it; it now validates against Margo's published
+  `margo.org/v1-alpha1` LinkML schema on every PR, and passes clean. The schema and Margo's own
+  valid/**invalid** examples are vendored (pinned to upstream `c198139`) so the gate is offline
+  and deterministic, and so a validator that quietly stopped discriminating fails instead of
+  passing us vacuously. Upstream drift is reported advisory-only.
+
+  Not a compliance claim — the Margo compliance test suite **cannot** be run today because it
+  does not exist yet (no conformance repo in the `margo` org). The README's honest status is
+  unchanged.
+
 ## [0.1.8] — 2026-07-21
 
 > **Aligned with iaiops 0.19.0: the `IAIOPS_READ_ONLY` gate is removed.** Read/write
