@@ -36,3 +36,42 @@ jobs:
         run: bandit -q -r iaiops_energy --severity-level medium
       - name: pytest
         run: pytest -q
+
+  margo-descriptor:
+    # deploy/margo/margo.yaml is machine-read by an orchestrator we do not control,
+    # and nothing checked it: a typo'd field name or a dropped enum value would ship
+    # and surface as a deployment failure at a substation. Margo's compliance test
+    # suite cannot be run today (it does not exist yet — no conformance repo in the
+    # `margo` org), but the specification DOES publish a LinkML schema for the
+    # Application Description, so structural validity is checkable now.
+    #
+    # Schema + Margo's own valid/invalid control examples are VENDORED under
+    # deploy/margo/schema/ and pinned to an upstream commit — `pre-draft` is a moving
+    # branch, and a live fetch would turn an upstream edit into a red build on an
+    # unrelated PR. Mirrors the base repo's gate; see PROVENANCE.md there.
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: install linkml
+        run: pip install "linkml==1.11.1"
+      # Validates the upstream valid AND invalid controls before our descriptor, so a
+      # validator that stopped discriminating fails here instead of passing us vacuously.
+      - name: validate against vendored margo.org/v1-alpha1 schema
+        run: ./scripts/margo_validate.sh
+
+      # Advisory: tells us the spec moved, never fails somebody's PR.
+      - name: upstream schema drift (advisory)
+        continue-on-error: true
+        run: |
+          upstream=$(mktemp)
+          curl -fsSL -o "$upstream" \
+            https://raw.githubusercontent.com/margo/specification/pre-draft/src/specification/applications/application-description.linkml.yaml
+          if diff -q "$upstream" deploy/margo/schema/application-description.linkml.yaml >/dev/null; then
+            echo "vendored schema matches upstream pre-draft"
+          else
+            echo "::warning::Margo's upstream schema has moved since it was vendored."
+            diff "$upstream" deploy/margo/schema/application-description.linkml.yaml || true
+          fi
