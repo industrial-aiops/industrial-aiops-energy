@@ -11,7 +11,7 @@ FROM python:${PYTHON_VERSION}-slim AS build
 # (`pyiec61850`, libiec61850 SWIG) is a linux-only wheel — 待核实 whether a given base image needs
 # extra system libs; drop to `iec104,dnp3` if it fails on your target.
 ARG EXTRAS=energy
-ARG IAIOPS_ENERGY_VERSION=0.1.3
+ARG IAIOPS_ENERGY_VERSION=0.1.8
 ENV PIP_NO_CACHE_DIR=1 PIP_DISABLE_PIP_VERSION_CHECK=1
 RUN python -m venv /opt/venv
 ENV PATH="/opt/venv/bin:$PATH"
