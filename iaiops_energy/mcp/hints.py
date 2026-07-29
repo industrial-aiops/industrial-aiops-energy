@@ -42,8 +42,16 @@ def hints_for(fn: Any) -> Optional[ToolAnnotations]:
     parameter (having one means the tool has a real write mode) AND no egress.
     Egress matters because a tool can ship plant data to a caller-named destination
     without touching a device — low risk, but emphatically not read-only.
-    ``openWorldHint`` is always true: every tool reaches substation equipment or an
-    external system, never a closed local domain.
+
+    ``idempotentHint`` is left UNSET unless ``@governed_tool`` positively declares
+    ``idempotent=True``. Asserting ``False`` would be a claim the harness has no
+    basis for; unset means "not specified", which is the truth.
+
+    ``openWorldHint`` is asserted, not derived: ``True`` for every tool, the spec
+    default and the conservative direction. Most tools reach substation equipment or
+    an external system, but not all — ``substation_event_analysis`` is a pure SOE
+    analysis over caller-supplied events with no protocol I/O. Telling them apart
+    needs a ``closed_world`` declaration on ``@governed_tool`` that does not exist.
     """
     if not getattr(fn, "_is_governed_tool", False):
         return None
@@ -55,6 +63,6 @@ def hints_for(fn: Any) -> Optional[ToolAnnotations]:
     return ToolAnnotations(
         readOnlyHint=risk_level == "low" and not has_write_mode and not egresses,
         destructiveHint=risk_level in _DESTRUCTIVE_TIERS,
-        idempotentHint=bool(getattr(fn, "_idempotent", False)),
+        idempotentHint=True if getattr(fn, "_idempotent", False) else None,
         openWorldHint=True,
     )
