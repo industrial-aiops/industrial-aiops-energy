@@ -24,6 +24,7 @@ from mcp_server.noegress import NO_EGRESS_ENV, apply_no_egress, no_egress_active
 from mcp_server.profiles import BRAIN_MODULES
 
 from iaiops_energy.mcp._app import mcp
+from iaiops_energy.mcp.hints import hints_for
 
 logger = logging.getLogger(__name__)
 
@@ -55,7 +56,10 @@ def _mount_base_brain_tools() -> None:
             tool.fn,
             name=tool.name,
             description=tool.description,
-            annotations=getattr(tool, "annotations", None),
+            # Prefer what the base server already derived; fall back to deriving
+            # here so the surface is fully annotated even against a base package
+            # that predates its own hint derivation (pin floor: iaiops>=0.19).
+            annotations=getattr(tool, "annotations", None) or hints_for(tool.fn),
         )
 
 

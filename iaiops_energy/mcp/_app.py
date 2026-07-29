@@ -15,7 +15,12 @@ crashes FastMCP's ``issubclass`` check.
 
 from __future__ import annotations
 
+from collections.abc import Callable
+from typing import Any
+
 from mcp.server.fastmcp import FastMCP
+
+from iaiops_energy.mcp.hints import hints_for
 
 SERVER_NAME = "iaiops-energy"
 
@@ -43,4 +48,29 @@ INSTRUCTIONS = (
     "issue or PR on industrial-aiops/industrial-aiops-energy."
 )
 
-mcp = FastMCP(SERVER_NAME, instructions=INSTRUCTIONS)
+
+class _GovernedFastMCP(FastMCP):
+    """FastMCP that annotates every tool from its ``@governed_tool`` metadata.
+
+    ``@mcp.tool()`` is the OUTERMOST decorator on every energy tool, so the function
+    it receives already carries the governance attributes ``hints_for`` reads. Doing
+    the derivation here — once — keeps the registration sites free of hand-written
+    hints that could drift from the risk tier they describe. Mirrors
+    ``_GovernedFastMCP`` in the base repo's ``mcp_server/_shared.py``.
+
+    Note this covers the tools registered *here*; the base brain tools mirrored in by
+    ``iaiops_energy.mcp.server._mount_base_brain_tools`` arrive via ``add_tool`` and
+    are annotated on that path instead.
+
+    An explicit ``annotations=`` argument still wins.
+    """
+
+    def tool(self, *args: Any, annotations: Any = None, **kwargs: Any) -> Callable:
+        def decorator(fn: Callable) -> Callable:
+            derived = annotations if annotations is not None else hints_for(fn)
+            return FastMCP.tool(self, *args, annotations=derived, **kwargs)(fn)
+
+        return decorator
+
+
+mcp = _GovernedFastMCP(SERVER_NAME, instructions=INSTRUCTIONS)

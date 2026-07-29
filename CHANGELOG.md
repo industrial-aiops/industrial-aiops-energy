@@ -9,6 +9,34 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **MCP tool annotations, derived from the governance harness.** All 59 tools now ship the
+  four MCP `ToolAnnotations` hints (`readOnlyHint` / `destructiveHint` / `idempotentHint` /
+  `openWorldHint`), so a client can tell what a tool does to the world *programmatically*
+  instead of parsing the `[READ]`/`[WRITE]` docstring tag a human reads. Mirrors the base
+  repo's change; tool surface unchanged (59 before and after).
+
+  Two paths needed covering, because this edition assembles its surface from two sources.
+  Native energy tools go through `@mcp.tool()`, so a `FastMCP` subclass (`_GovernedFastMCP`
+  in `iaiops_energy/mcp/_app.py`) derives their hints at registration. The base **brain**
+  tools arrive through `_mount_base_brain_tools` → `add_tool`, which now falls back to
+  deriving locally when the installed base package supplies no annotations of its own.
+
+  Result on the wire: **55 read-only, 0 destructive**, and 4 neither — the egress tools
+  (`historian_push`, `rca_narrate`, `stream_publish`, `stream_publish_event`) mirrored in
+  from the base brain, which ship data to a caller-named destination without touching a
+  device. Zero destructive tools is the expected shape and is now enforced by a test: this
+  edition exposes no control direction, so a destructive tool appearing here would mean
+  control-direction code had landed in a monitor-only edition.
+
+  `iaiops_energy/mcp/hints.py` **duplicates** the base repo's `mcp_server/hints.py` rather
+  than importing it, because the pin floor is `iaiops>=0.19` and the base module first ships
+  in the release after 0.19.0. Once the pin can be raised this collapses to a re-export;
+  until then a drift-guard test asserts the two derivations agree whenever the installed base
+  package carries one (it skips against 0.19.0).
+
+  **Hints, not a gate** — the MCP spec says annotations must not be relied on for security
+  decisions. Enforcement stays in `@governed_tool` (base docs/HLD.md decision records
+  D1/D3/D4).
 - **Margo descriptor schema gate** (CI job `margo-descriptor`, `scripts/margo_validate.sh`),
   mirroring the base repo. `deploy/margo/margo.yaml` is machine-read by an orchestrator we do
   not control and nothing validated it; it now validates against Margo's published
