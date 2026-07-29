@@ -34,6 +34,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   until then a drift-guard test asserts the two derivations agree whenever the installed base
   package carries one (it skips against 0.19.0).
 
+  `idempotentHint` is left **unset** unless a tool declares `idempotent=True` (none does):
+  asserting `False` would be a claim the harness has no basis for. `openWorldHint` is the one
+  hint **asserted rather than derived** — always `true`, the spec default and the conservative
+  direction, even though `substation_event_analysis` is a pure SOE analysis with no protocol
+  I/O. Distinguishing closed-domain tools needs a `closed_world` declaration on
+  `@governed_tool` that does not exist yet.
+
   **Hints, not a gate** — the MCP spec says annotations must not be relied on for security
   decisions. Enforcement stays in `@governed_tool` (base docs/HLD.md decision records
   D1/D3/D4).
