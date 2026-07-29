@@ -18,7 +18,7 @@ keywords = [
 ]
 # Depends on the base Industrial-AIOps package for the shared core (governance /
 # brain / runtime / normalized model) and the MCP server infra it registers onto.
-dependencies = ["iaiops>=0.19,<1.0"]
+dependencies = ["iaiops>=0.20.1,<1.0"]
 
 [project.optional-dependencies]
 # Protocol client libs — imported LAZILY so the package installs without them.

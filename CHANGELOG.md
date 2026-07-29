@@ -28,11 +28,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   edition exposes no control direction, so a destructive tool appearing here would mean
   control-direction code had landed in a monitor-only edition.
 
-  `iaiops_energy/mcp/hints.py` **duplicates** the base repo's `mcp_server/hints.py` rather
-  than importing it, because the pin floor is `iaiops>=0.19` and the base module first ships
-  in the release after 0.19.0. Once the pin can be raised this collapses to a re-export;
-  until then a drift-guard test asserts the two derivations agree whenever the installed base
-  package carries one (it skips against 0.19.0).
+  `iaiops_energy/mcp/hints.py` is a **re-export** of the base repo's `mcp_server/hints.py`.
+  It shipped briefly as a copy — the derivation landed in both repos at once, while the pin
+  floor was still `iaiops>=0.19` and the base module first appeared in 0.20.1. The pin is now
+  `iaiops>=0.20.1`, so the copy is gone: 60 lines became 22, and the two repos cannot derive
+  hints differently because there is only one derivation. The drift guard that watched the
+  copy went green against the real base derivation across five risk tiers *before* the file
+  was collapsed; it is now an identity assertion (`hints_for is mcp_server.hints.hints_for`)
+  so a future local reimplementation cannot silently reintroduce the divergence.
 
   `idempotentHint` is left **unset** unless a tool declares `idempotent=True` (none does):
   asserting `False` would be a claim the harness has no basis for. `openWorldHint` is the one
