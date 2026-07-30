@@ -16,7 +16,17 @@ normalized ISA-95/18.2 model), and MCP server infrastructure — this repo only 
 the three energy connectors + their session builders + MCP tools. Read-first: no
 control-direction writes are exposed.
 
-Current release: **0.1.8** (requires `iaiops>=0.19,<1.0`). New in 0.1.8 — the base
+Current release: **0.1.9** (requires `iaiops>=0.20.1,<1.0`). New in 0.1.9 — every tool now
+ships the MCP `ToolAnnotations` hints (`readOnlyHint` / `destructiveHint` / `openWorldHint`),
+**derived** from the `@governed_tool` harness rather than hand-written, so a client can tell a
+monitor read from a tool that acts without parsing the `[READ]`/`[WRITE]` docstring tag. On the
+wire that is 59 tools, 55 read-only and **0 destructive** — this edition exposes no control
+direction, and that is now enforced by a test rather than only documented. They are hints, not a
+gate: the MCP spec forbids relying on annotations for security decisions, and enforcement stays in
+`@governed_tool`. The base pin moved to `iaiops>=0.20.1` so the hint derivation is imported from
+`mcp_server.hints` instead of duplicated here.
+
+Previously in 0.1.8 — the base
 `IAIOPS_READ_ONLY` gate was **removed** in iaiops 0.19.0 (read/write authorisation is the
 caller's decision — agent judgement / account management — not the tap's; every tool is
 governed and audited via the base `@governed_tool` harness), so this edition drops it too.

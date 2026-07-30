@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.9] — 2026-07-30
+
+> **What a tool does to the world is now machine-readable.** Every tool ships the MCP
+> `ToolAnnotations` hints, derived from the `@governed_tool` harness rather than
+> hand-written. On the wire: 59 tools, 55 read-only, **0 destructive** — this edition
+> exposes no control direction, now enforced by a test rather than only documented.
+> Hints, not a gate: enforcement stays in `@governed_tool`.
+
 ### Added
 
 - **MCP tool annotations, derived from the governance harness.** All 59 tools now ship the
@@ -81,7 +89,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   so the prior pin range no longer imports. 0.19.0 also adds effect-based write risk
   (`preview_param`); this edition has no write tools, so nothing to opt in.
 
-## [Unreleased]
+## [0.1.7] — 2026-07-19
 
 ### Fixed
 - **`IAIOPS_READ_ONLY` / `IAIOPS_NO_EGRESS` were silently ineffective on this server.**

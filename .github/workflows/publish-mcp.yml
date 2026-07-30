@@ -65,6 +65,35 @@ jobs:
           fi
           echo "server.json ${declared} matches tag v${tag}"
 
+      # The registry REJECTS a descriptor whose PyPI package version does not exist
+      # yet. The base repo hit this on its v0.20.1 tag — an 8-second failure with
+      # "PyPI package 'iaiops' exists, but version '0.20.1' was not found (404)".
+      # It is an ordering problem, not a flake: the PyPI upload is manual and the
+      # tag push that triggers this workflow is what the releaser does FIRST, so
+      # the registry validates against a version minutes away from existing.
+      # Waiting here makes the ordering irrelevant instead of relying on the
+      # releaser to invert it.
+      #
+      # Polls the SIMPLE index rather than the JSON API: the JSON API updates first
+      # and a stale simple-index CDN edge has broken a release after the JSON API
+      # was already serving the version. Note the PEP 503 normalised filename —
+      # `iaiops-energy` ships as `iaiops_energy-<version>`.
+      - name: Wait until the PyPI release the descriptor points at is installable
+        if: startsWith(github.ref, 'refs/tags/v')
+        run: |
+          v="${GITHUB_REF#refs/tags/v}"
+          pkg="$(jq -r '.packages[0].identifier' server.json)"
+          for i in $(seq 1 40); do
+            if curl -fsS "https://pypi.org/simple/${pkg}/" 2>/dev/null | grep -q "${pkg//-/_}-${v}\|${pkg}-${v}"; then
+              echo "${pkg} ${v} is on the PyPI simple index (attempt ${i})."
+              exit 0
+            fi
+            echo "${pkg} ${v} not on the simple index yet (attempt ${i}/40) — sleeping 30s…"
+            sleep 30
+          done
+          echo "::error::${pkg} ${v} never appeared on PyPI within 20 min — upload the wheel, then re-run this workflow."
+          exit 1
+
       - name: Authenticate to the MCP Registry (OIDC)
         run: ./mcp-publisher login github-oidc
 
