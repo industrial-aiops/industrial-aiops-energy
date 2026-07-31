@@ -59,12 +59,17 @@ tool lacks the governance marker).
 
 **变电站现场的测试反馈是这个包最缺的东西。** IEC-104 / DNP3 / IEC-61850 三条监视路径均已
 对真实库(c104 / opendnp3 / libiec61850 的进程内 server)在 Linux 容器里 loopback 往返验证,但 **真实 RTU / IED
-物理设备一律 `待核实`** —— 如果你能在授权的测试环境里对真实变电设备跑一遍
+物理设备一律 `待核实`**。三者的证据新鲜度并不相同:IEC-104 与 IEC-61850 的 loopback 测试
+**每次 CI 都真实执行**;DNP3 的 loopback 只在 2026-07-02 手工跑过一次 —— `pydnp3` 无 wheel、
+需从源码编译 opendnp3,托管 runner 上构建失败,所以 `test_dnp3_live.py` 在每次 CI 中都被跳过 —— 如果你能在授权的测试环境里对真实变电设备跑一遍
 `iaiops doctor`,我们非常想听结果。经你验证的设备会署名写进支持矩阵。
 
 **Live substation RTU / IED / IEC-104 field testing is what this package needs most.**
 The IEC-104, DNP3 and IEC-61850 monitor paths are library-loopback-verified, but real gear stays
-`待核实`. Report results (protocol + device model + `iaiops doctor` output) via the base
+`待核实`. The three do not carry equally fresh evidence: the IEC-104 and IEC-61850 loopback tests
+**run on every CI build**, while the DNP3 one was executed manually once, on 2026-07-02 — `pydnp3`
+ships no wheel and needs an opendnp3 source build that fails on hosted runners, so
+`test_dnp3_live.py` is skipped by every CI run. Report results (protocol + device model + `iaiops doctor` output) via the base
 repo's pinned issue:
 👉 [industrial-aiops#28 — Call for field-testing partners (v0.10.0)](https://github.com/industrial-aiops/industrial-aiops/issues/28)
 

@@ -25,7 +25,15 @@ jobs:
           # fails on hosted runners; pydnp3 is imported LAZILY and the dnp3 unit tests monkeypatch
           # the client (test_dnp3.py), while test_dnp3_live.py skips cleanly when it's absent — so
           # coverage is unchanged. (Base roadmap: "DNP3 not yet CI-verifiable".)
-          pip install "pydnp3>=0.1,<1" || echo "pydnp3 unavailable (native build); dnp3 unit tests use mocks, live test skips"
+          # Surface the outcome instead of swallowing it. Either branch is a fact worth
+          # seeing in the run summary: if it stays unavailable, every build should say so
+          # rather than let "green" imply the DNP3 live path was exercised; if it ever
+          # starts installing, that is news too — test_dnp3_live.py would begin running.
+          if pip install "pydnp3>=0.1,<1"; then
+            echo "::notice title=DNP3::pydnp3 installed — test_dnp3_live.py will run this build"
+          else
+            echo "::warning title=DNP3 live path not exercised::pydnp3 could not be built (no wheel; opendnp3 source build fails on hosted runners). dnp3 unit tests use mocks and test_dnp3_live.py is SKIPPED — this build proves nothing about the DNP3 wire path."
+          fi
           # iec61850 (linux-only wheel) — best effort; skipped if unavailable
           pip install "pyiec61850>=1.5.2a1,<2" || echo "pyiec61850 unavailable; iec61850 unit tests use the lazy-import path"
       - name: ruff
