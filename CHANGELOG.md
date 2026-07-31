@@ -7,6 +7,41 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.10] — 2026-07-31
+
+> **Security fix, inherited.** Three egress tools this edition mirrors from the base
+> package wrote their credential into the audit log in the clear. The tools are defined
+> in `iaiops`, so this edition could not fix the leak on its own — raising the pin to
+> `iaiops>=0.20.2` is the fix, and a contract test now fails the build if it ever regresses.
+
+### Fixed
+
+- **A credential passed to a mirrored egress tool was audited in the clear.**
+  `stream_publish` / `stream_publish_event` (`token`, a NATS auth token) and
+  `historian_push` (`password`, the TSDB password) never declared those parameters in
+  `sensitive_params`, so `@governed_tool` bound them into the audit row verbatim — and
+  `audit_forward` shipped that row to the configured SIEM. These three arrive here through
+  `_mount_base_brain_tools`, so this edition was affected exactly as the base was.
+
+  > **If you have passed a NATS token or historian password to these tools, rotate it**
+  > and check existing audit rows / SIEM indexes for it.
+
+  Fixed upstream in `iaiops` 0.20.2; the pin moves from `>=0.20.1` to `>=0.20.2`. The
+  energy connectors themselves take no credential parameters — substation targets are
+  addressed by host / common-address / unit-id, and secrets come from the encrypted store
+  by name — so nothing defined in this package leaked.
+
+### Added
+
+- **Credential-redaction contract test** (`tests/test_credential_redaction_contract.py`),
+  mirroring the base repo's. Worth having separately because this edition's registered
+  surface is not the base's: the mirrored tools land through `_mount_base_brain_tools`, so
+  a base fix only reaches here when the pin moves — precisely the window in which this
+  edition shipped the leak after the base was already fixed. Verified red against
+  `iaiops==0.20.1` and green against `0.20.2`. A second assertion pins *why* the file
+  exists in a package that defines no credential parameters of its own, so the guard
+  cannot quietly become decorative if those tools stop being mirrored.
+
 ## [0.1.9] — 2026-07-30
 
 > **What a tool does to the world is now machine-readable.** Every tool ships the MCP

@@ -16,7 +16,15 @@ normalized ISA-95/18.2 model), and MCP server infrastructure — this repo only 
 the three energy connectors + their session builders + MCP tools. Read-first: no
 control-direction writes are exposed.
 
-Current release: **0.1.9** (requires `iaiops>=0.20.1,<1.0`). New in 0.1.9 — every tool now
+Current release: **0.1.10** (requires `iaiops>=0.20.2,<1.0`). New in 0.1.10 — a **security
+fix inherited from the base package**: three egress tools this edition mirrors
+(`stream_publish`, `stream_publish_event`, `historian_push`) wrote their credential — a NATS
+auth token, a TSDB password — into the audit log in the clear, and `audit_forward` shipped
+that row to the configured SIEM. They are defined in `iaiops`, so this edition could not fix
+it alone; the pin moves to `iaiops>=0.20.2`, and a contract test now fails the build if the
+whole registered surface ever again carries an undeclared credential parameter. **If you have
+passed a token or historian password to these tools, rotate it** and check existing audit
+rows. The energy connectors themselves take no credential parameters. Previously in 0.1.9 — every tool
 ships the MCP `ToolAnnotations` hints (`readOnlyHint` / `destructiveHint` / `openWorldHint`),
 **derived** from the `@governed_tool` harness rather than hand-written, so a client can tell a
 monitor read from a tool that acts without parsing the `[READ]`/`[WRITE]` docstring tag. On the
