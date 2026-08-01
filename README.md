@@ -66,19 +66,20 @@ tool lacks the governance marker).
 ## 🧪 测试与共创 / Beta testing & co-creation
 
 **变电站现场的测试反馈是这个包最缺的东西。** IEC-104 / DNP3 / IEC-61850 三条监视路径均已
-对真实库(c104 / opendnp3 / libiec61850 的进程内 server)在 Linux 容器里 loopback 往返验证,但 **真实 RTU / IED
-物理设备一律 `待核实`**。三者的证据新鲜度并不相同:IEC-104 与 IEC-61850 的 loopback 测试
-**每次 CI 都真实执行**;DNP3 的 loopback 只在 2026-07-02 手工跑过一次 —— `pydnp3` 无 wheel、
-需从源码编译 opendnp3,托管 runner 上构建失败,所以 `test_dnp3_live.py` 在每次 CI 中都被跳过 —— 如果你能在授权的测试环境里对真实变电设备跑一遍
-`iaiops doctor`,我们非常想听结果。经你验证的设备会署名写进支持矩阵。
+对真实库(c104 / opendnp3 / libiec61850 的进程内 server)loopback 往返验证,**且三条都在每次 CI
+真实执行**——跳过会让构建失败,而不是让它变绿。(2026-08-01 起:此前 DNP3 的证据只是
+2026-07-02 的一次手工运行,因为 `pydnp3` 被认为在托管 runner 上无法构建;那个结论是错的,
+见下方 `scripts/build_pydnp3.sh`。)但 **真实 RTU / IED 物理设备一律 `待核实`** ——
+如果你能在授权的测试环境里对真实变电设备跑一遍 `iaiops doctor`,我们非常想听结果。
+经你验证的设备会署名写进支持矩阵。
 
 **Live substation RTU / IED / IEC-104 field testing is what this package needs most.**
-The IEC-104, DNP3 and IEC-61850 monitor paths are library-loopback-verified, but real gear stays
-`待核实`. The three do not carry equally fresh evidence: the IEC-104 and IEC-61850 loopback tests
-**run on every CI build**, while the DNP3 one was executed manually once, on 2026-07-02 — `pydnp3`
-ships no wheel and needs an opendnp3 source build that fails on hosted runners, so
-`test_dnp3_live.py` is skipped by every CI run. Report results (protocol + device model + `iaiops doctor` output) via the base
-repo's pinned issue:
+The IEC-104, DNP3 and IEC-61850 monitor paths are library-loopback-verified, and **all three
+now run on every CI build** — a skip fails the build rather than passing it. (Since
+2026-08-01: DNP3's evidence used to be a single manual run on 2026-07-02, because `pydnp3`
+was believed unbuildable on hosted runners. That belief was wrong — see
+`scripts/build_pydnp3.sh`.) Real gear stays `待核实`. Report results (protocol + device
+model + `iaiops doctor` output) via the base repo's pinned issue:
 👉 [industrial-aiops#28 — Call for field-testing partners (v0.10.0)](https://github.com/industrial-aiops/industrial-aiops/issues/28)
 
 ## Why a separate repo
@@ -134,25 +135,36 @@ protocol is promoted.
 
 | Protocol | Status | CI coverage | Evidence |
 | --- | --- | --- | --- |
-| **DNP3 / IEEE 1815** | **verified (monitor path)** | ⏭ skips on hosted CI ¹ | Real master↔outstation round-trip against a live **opendnp3** outstation (`pydnp3`): `is_online()` reflects the real channel `OnStateChange`, and `integrity_poll()` (Class 0/1/2/3) returns the seeded binary/analog/counter database grouped by type. See `tests/test_dnp3_live.py` (`@pytest.mark.integration`, skips when `pydnp3` is absent). No physical RTU. |
+| **DNP3 / IEEE 1815** | **verified (monitor path)** | ✅ runs every push ¹ | Real master↔outstation round-trip against a live **opendnp3** outstation (`pydnp3`): `is_online()` reflects the real channel `OnStateChange`, and `integrity_poll()` (Class 0/1/2/3) returns the seeded binary/analog/counter database grouped by type. See `tests/test_dnp3_live.py` (`@pytest.mark.integration`). No physical RTU. |
 | **IEC 60870-5-104** | **verified (monitor path)** | ✅ runs every push | Real client↔server round-trip against an in-process **`c104`** server (`tests/test_iec104_live.py` + `tests/iec104_server_harness.py`, `@pytest.mark.integration`, passes in a Linux container): `iec104_connection_info` discovers the seeded station, `iec104_interrogate` (general interrogation / C_IC) returns the seeded `M_ME_NC_1` + `M_SP_NA_1` points with quality, `iec104_read_point` reads the measurand, a bad IOA yields `found=False` with **no fabricated value**, and server-side ASDU capture proves **no control ASDU** (C_SC / C_DC / C_SE) is ever issued. `c104` ships no macOS wheel so the test skips on macOS (runs in CI / Linux). No physical RTU. Monitor/read only. |
-| **IEC 61850 (MMS)** | **verified (monitor path)** | ⏭ skips on hosted CI ¹ | Real client↔server MMS round-trip against an in-process **libiec61850** MMS server built with `pyiec61850`'s server API: `iec61850_device_directory` lists the logical device (and browses its logical nodes / data objects), and `iec61850_read` returns a seeded measurand (`TotW.mag.f`, FC `MX`) over real ISO-on-TCP; a bad reference surfaces an MMS data-access error instead of a fabricated value. See `tests/test_iec61850_live.py` (`@pytest.mark.integration`, skips when `pyiec61850` / its server API is absent). No physical IED. Read/monitor only — control / GOOSE / SV out of scope. |
+| **IEC 61850 (MMS)** | **verified (monitor path)** | ✅ runs every push | Real client↔server MMS round-trip against an in-process **libiec61850** MMS server built with `pyiec61850`'s server API: `iec61850_device_directory` lists the logical device (and browses its logical nodes / data objects), and `iec61850_read` returns a seeded measurand (`TotW.mag.f`, FC `MX`) over real ISO-on-TCP; a bad reference surfaces an MMS data-access error instead of a fabricated value. See `tests/test_iec61850_live.py` (`@pytest.mark.integration`, skips when `pyiec61850` / its server API is absent). No physical IED. Read/monitor only — control / GOOSE / SV out of scope. |
 
-**¹ CI-coverage caveat (honest).** Only **IEC-104**'s monitor path is CI-gated: the
-CI job hard-installs the `iec104` extra, so `test_iec104_live.py` runs its full
-loopback round-trip on **every push**. **DNP3** and **IEC-61850** are loopback-verified
-only via **manual / Docker runs** — their native libraries (`opendnp3` via `pydnp3`,
-`libiec61850` via `pyiec61850`) do **not** build on hosted GitHub runners, so CI installs
-them best-effort and `test_dnp3_live.py` / `test_iec61850_live.py` **SKIP** there. A
-regression in the DNP3 or IEC-61850 monitor path is therefore **not caught by CI** and
-must be re-checked with a manual/Docker run — the "verified (monitor path)" claim for
-those two rests on those out-of-CI runs, not on the green CI badge.
+**¹ All three monitor paths are now CI-gated**, and a skip fails the build rather than
+passing it (`no live protocol test may skip`). This used to read: *"only IEC-104 is
+CI-gated; DNP3 and IEC-61850 rest on out-of-CI runs, not on the green badge."* That was
+true and is no longer.
 
-DNP3 notes: read-only / monitor direction only (no control). `pydnp3` 0.1.0 ships no
-wheel and needs a native opendnp3 build, so the live test runs in a Linux container;
-its `DNP3Manager.Shutdown()` can block in a long-lived interpreter, so the connector
-bounds teardown (`_Pydnp3MasterAdapter.shutdown`) and the test drives the round-trip
-in a short-lived child process.
+DNP3 was the last one, and the reason is worth recording because the old note here — and
+the CI job, and this README — all repeated the same wrong conclusion for months:
+`pip install pydnp3` fails on any current Linux, so it was taken as **unbuildable** on
+hosted runners. It is not. opendnp3 itself compiles clean; what had rotted was the 2019
+binding layer. Three mechanical fixes, no patches to opendnp3:
+
+1. Python headers must be present (`python3-dev`) — without them the build dies at
+   `Python.h: No such file or directory`, which is what "unbuildable" looked like;
+2. 214 vendored headers `#include <python2.7/Python.h>`, rewritten to `<Python.h>`;
+3. the vendored pybind11 predates CPython 3.11 (it reads `PyFrameObject` internals that
+   3.11 made opaque) and GCC 13 (`std::uint16_t` without `<cstdint>`) — replaced with
+   pybind11 v2.13.6.
+
+`scripts/build_pydnp3.sh` applies all three and verifies the import. ~3 min cold on two
+cores. The lesson generalises: *"the ecosystem says it cannot be built"* is a claim to
+test, not to inherit.
+
+DNP3 notes: read-only / monitor direction only (no control). Its
+`DNP3Manager.Shutdown()` can block in a long-lived interpreter, so the connector bounds
+teardown (`_Pydnp3MasterAdapter.shutdown`) and the test drives the round-trip in a
+short-lived child process.
 
 ## License
 

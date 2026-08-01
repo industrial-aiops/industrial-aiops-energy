@@ -21,29 +21,40 @@ jobs:
           python -m pip install --upgrade pip
           # base package + IEC-104 + dev tools (these install cleanly from wheels)
           pip install -e ".[iec104,dev]"
-          # dnp3 (pydnp3) — best effort: no wheel, needs a native opendnp3 source build that
-          # fails on hosted runners; pydnp3 is imported LAZILY and the dnp3 unit tests monkeypatch
-          # the client (test_dnp3.py), while test_dnp3_live.py skips cleanly when it's absent — so
-          # coverage is unchanged. (Base roadmap: "DNP3 not yet CI-verifiable".)
-          # Surface the outcome instead of swallowing it. Either branch is a fact worth
-          # seeing in the run summary: if it stays unavailable, every build should say so
-          # rather than let "green" imply the DNP3 live path was exercised; if it ever
-          # starts installing, that is news too — test_dnp3_live.py would begin running.
-          if pip install "pydnp3>=0.1,<1"; then
-            echo "::notice title=DNP3::pydnp3 installed — test_dnp3_live.py will run this build"
-          else
-            echo "::warning title=DNP3 live path not exercised::pydnp3 could not be built (no wheel; opendnp3 source build fails on hosted runners). dnp3 unit tests use mocks and test_dnp3_live.py is SKIPPED — this build proves nothing about the DNP3 wire path."
-          fi
           # iec61850 (linux-only wheel) — best effort; skipped if unavailable
           pip install "pyiec61850>=1.5.2a1,<2" || echo "pyiec61850 unavailable; iec61850 unit tests use the lazy-import path"
+
+      # pydnp3 has no wheel and `pip install pydnp3` fails on any current Linux, so
+      # test_dnp3_live.py — the only coverage the DNP3 monitor path has — was skipped
+      # on every build, and this job printed a warning saying so.
+      #
+      # It turned out not to be unbuildable. opendnp3 itself compiles clean; what had
+      # rotted was the 2019 binding layer (python2.7 includes, a vendored pybind11 that
+      # predates CPython 3.11 and GCC 13). scripts/build_pydnp3.sh applies those three
+      # mechanical fixes and verifies the result. ~3 min cold, then cached.
+      - name: build pydnp3 (real opendnp3 binding)
+        run: VENV="$(python -c 'import sys,os;print(os.path.dirname(os.path.dirname(sys.executable)))')" bash scripts/build_pydnp3.sh
       - name: ruff
         run: ruff check iaiops_energy tests
       - name: ruff format (check)
         run: ruff format --check iaiops_energy tests
       - name: bandit (0 Medium+)
         run: bandit -q -r iaiops_energy --severity-level medium
+      # -rs so a silently disabled test is visible in the log; --strict so the three
+      # live tests cannot quietly go back to skipping. All three energy protocols now
+      # have a real client↔server round-trip in this job: IEC-104 (c104), DNP3
+      # (opendnp3), IEC-61850 (libiec61850). A skip here means an install step
+      # regressed, which is exactly what should fail the build rather than pass it.
       - name: pytest
-        run: pytest -q
+        run: pytest -q -rs
+      - name: no live protocol test may skip
+        run: |
+          pytest -q -rs -m integration tests/test_dnp3_live.py tests/test_iec104_live.py \
+            tests/test_iec61850_live.py 2>&1 | tee /tmp/live.txt
+          if grep -q SKIPPED /tmp/live.txt; then
+            echo "::error title=Live protocol test skipped::a protocol round-trip did not run — see the skip reason above"
+            exit 1
+          fi
 
   margo-descriptor:
     # deploy/margo/margo.yaml is machine-read by an orchestrator we do not control,

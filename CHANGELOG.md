@@ -7,6 +7,35 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **`scripts/build_pydnp3.sh` — DNP3 is CI-gated for the first time.** `pip install pydnp3`
+  fails on any current Linux, and this repo inherited the ecosystem's conclusion that the
+  package is **unbuildable on hosted runners**: `tests/test_dnp3_live.py` — the only coverage
+  the DNP3 monitor path has — skipped on every build, the CI job printed a warning saying so,
+  and the README's "verified (monitor path)" rested on one manual run from 2026-07-02.
+
+  It is not unbuildable. opendnp3 itself compiles clean; the 2019 binding layer is what had
+  rotted, in three mechanical ways: Python headers missing (`python3-dev` — the failure that
+  *looked* like "unbuildable"), 214 vendored headers including `<python2.7/Python.h>`, and a
+  vendored pybind11 that predates CPython 3.11 (reads `PyFrameObject` internals 3.11 made
+  opaque) and GCC 13 (`std::uint16_t` without `<cstdint>`). The script applies all three,
+  swaps in pybind11 v2.13.6, and verifies the import. ~3 min cold on two cores.
+
+  The DNP3 live test now runs in CI against a real opendnp3 outstation. *"The ecosystem says
+  it cannot be built"* turned out to be a claim worth testing rather than inheriting.
+
+### Changed
+
+- **A skipped live protocol test now fails the build.** All three monitor paths (IEC-104,
+  DNP3, IEC-61850) run a real client↔server round-trip on every push, and a new
+  `no live protocol test may skip` step turns a silent skip into a red build. Previously a
+  broken install step would have quietly downgraded coverage while the badge stayed green —
+  which is exactly how the DNP3 gap persisted.
+- README's validation table and the bilingual beta-testing section corrected: they claimed
+  DNP3 and IEC-61850 "skip on hosted CI". IEC-61850 had in fact been running in CI for some
+  time, and DNP3 now does too.
+
 ## [0.1.10] — 2026-07-31
 
 > **Security fix, inherited.** Three egress tools this edition mirrors from the base
