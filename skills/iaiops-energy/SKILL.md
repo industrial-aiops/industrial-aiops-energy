@@ -136,22 +136,20 @@ base `iaiops` skill for the full brain reference.
 | Protocol | Lib pin (this release) | Spec / transport | Verification status | CI |
 | --- | --- | --- | --- | --- |
 | IEC 60870-5-104 | `c104>=2.0,<3` | IEC 60870-5-104 over TCP/2404 | **verified (monitor path)** — real client↔server round-trip vs an in-process `c104` server (`tests/test_iec104_live.py`, passes in a Linux container): general interrogation returns seeded points, bad IOA → no fabricated value, no control ASDU issued; skips on macOS (no `c104` wheel). Live RTU 待核实 | ✅ runs every push |
-| DNP3 / IEEE 1815 | `pydnp3>=0.1,<1` | IEEE 1815, TCP; monitor direction only | **verified (monitor path)** — real master↔outstation round-trip vs a live opendnp3 outstation in Docker/Linux; physical RTU 待核实 | ⏭ skips on hosted CI ¹ |
-| IEC 61850 MMS | `pyiec61850>=1.5.2a1,<2` (linux-only wheel) | MMS over ISO-on-TCP/102; no GOOSE/SV | **verified (monitor path)** — real client↔server round-trip vs an in-process libiec61850 MMS server in Docker/Linux; physical IED 待核实 | ⏭ skips on hosted CI ¹ |
+| DNP3 / IEEE 1815 | `pydnp3>=0.1,<1` | IEEE 1815, TCP; monitor direction only | **verified (monitor path)** — real master↔outstation round-trip vs a live opendnp3 outstation; physical RTU 待核实 | ✅ runs every push ¹ |
+| IEC 61850 MMS | `pyiec61850>=1.5.2a1,<2` (linux-only wheel) | MMS over ISO-on-TCP/102; no GOOSE/SV | **verified (monitor path)** — real client↔server round-trip vs an in-process libiec61850 MMS server; physical IED 待核实 | ✅ runs every push |
 
-**¹ CI-coverage caveat (honest).** Only **IEC-104**'s monitor path is CI-gated — the
-CI job hard-installs the `iec104` extra, so `test_iec104_live.py` runs its loopback
-round-trip on **every push**. **DNP3** and **IEC-61850** are loopback-verified only via
-**manual / Docker** runs: their native libs (`opendnp3` via `pydnp3`, `libiec61850` via
-`pyiec61850`) don't build on hosted GitHub runners, so CI installs them best-effort and
-`test_dnp3_live.py` / `test_iec61850_live.py` **SKIP** there. A regression in the DNP3 or
-IEC-61850 monitor path is thus **not caught by CI** — re-verify those with a manual/Docker
-run; the green CI badge does not cover them.
+**¹ All three monitor paths are CI-gated (since 0.1.11)**, and a skipped live test now
+**fails** the build — a skip and a pass look identical in a green badge, which is how the
+DNP3 gap survived. This block used to say DNP3 and IEC-61850 were not covered by CI.
+IEC-61850 had in fact been running there for some time and nobody rechecked; DNP3 was
+believed unbuildable on hosted runners, which was wrong — opendnp3 compiles clean and the
+2019 binding layer needed three mechanical fixes, scripted in `scripts/build_pydnp3.sh`.
 
-`pydnp3` ships no wheel (native opendnp3 build → run in a Linux container);
+`pydnp3` ships no wheel (opendnp3 is built from source by that script);
 `pyiec61850` is a linux-only SWIG wheel — both protocols no-op with a teaching
-error elsewhere. Anything not yet proven against real gear stays marked
-待核实 — do not claim otherwise.
+error elsewhere. **CI coverage is level ② (real library, loopback), never level ③.**
+Anything not yet proven against real gear stays marked 待核实 — do not claim otherwise.
 
 ## Doctor-first workflow
 

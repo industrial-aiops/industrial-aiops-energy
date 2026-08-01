@@ -7,6 +7,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.11] — 2026-08-01
+
+> **DNP3 is CI-gated for the first time, and "unbuildable" turned out to be wrong.** All
+> three monitor paths now run a real client↔server round-trip on every push, and a skipped
+> live test fails the build instead of passing it. Also inherits two governance fixes from
+> `iaiops` 0.20.3 (pin raised): a failed call is no longer audited as a success, and the
+> runaway guard can now see a caller retrying a denial forever.
+
+### Changed (inherited from `iaiops` 0.20.3)
+
+- The pin moves to `iaiops>=0.20.3`. Two governance fixes in the shared `@governed_tool`
+  harness reach this edition through it:
+  - **a call that failed was audited as `ok`.** Tools return the canonical `{error, hint}`
+    envelope rather than raising, so the governance wrapper saw an ordinary return value.
+    An IEC-104 read that could not reach the RTU was indistinguishable in the audit trail
+    from one that returned data — and the pattern circuit breaker was told "success" on
+    every failure, so an armed pattern that failed every time could never trip.
+  - **the runaway guard was blind to a retried denial** — the most likely stuck loop there
+    is. Measured upstream: 500 identical denied high-risk calls against a ceiling of 10,
+    zero stops. Denials now feed the loop detector while staying exempt from the ceilings.
+
 ### Added
 
 - **`scripts/build_pydnp3.sh` — DNP3 is CI-gated for the first time.** `pip install pydnp3`
