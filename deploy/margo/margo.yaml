@@ -10,7 +10,7 @@ metadata:
   description: >-
     Read-only OT tap for substation / utility telecontrol — IEC 60870-5-104, DNP3, IEC 61850 MMS —
     on top of iaiops.core (governance / cross-protocol RCA brain), exposed as governed MCP tools.
-  version: "0.1.10"
+  version: "0.1.11"
   catalog:
     application:
       tagline: Governed substation/utility read tap (IEC-104 / DNP3 / IEC-61850)

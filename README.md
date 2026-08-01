@@ -16,7 +16,16 @@ normalized ISA-95/18.2 model), and MCP server infrastructure — this repo only 
 the three energy connectors + their session builders + MCP tools. Read-first: no
 control-direction writes are exposed.
 
-Current release: **0.1.10** (requires `iaiops>=0.20.2,<1.0`). New in 0.1.10 — a **security
+Current release: **0.1.11** (requires `iaiops>=0.20.3,<1.0`). New in 0.1.11 — **all three
+monitor paths are CI-gated for the first time**, and a skipped live test now fails the build
+instead of passing it. DNP3 was the holdout: `pip install pydnp3` fails on any current Linux,
+so this repo inherited the ecosystem's "unbuildable on hosted runners" and
+`tests/test_dnp3_live.py` skipped on every build. It is not unbuildable — opendnp3 compiles
+clean, and the 2019 binding layer needed three mechanical fixes, now scripted in
+`scripts/build_pydnp3.sh` and running on real GitHub runners. Also inherits two governance
+fixes from `iaiops` 0.20.3 (pin raised): a call that **failed** is no longer audited as a
+success (which also mis-informed the pattern circuit breaker on every failure), and the
+runaway guard can now see a caller retrying a denial forever. Previously in 0.1.10 — a **security
 fix inherited from the base package**: three egress tools this edition mirrors
 (`stream_publish`, `stream_publish_event`, `historian_push`) wrote their credential — a NATS
 auth token, a TSDB password — into the audit log in the clear, and `audit_forward` shipped
