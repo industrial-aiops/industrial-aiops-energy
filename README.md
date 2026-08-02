@@ -1,6 +1,8 @@
 <!-- mcp-name: io.github.industrial-aiops/iaiops-energy -->
 
-# industrial-aiops-energy — 能源 edition (变电 / 电力)
+# industrial-aiops-energy — Energy Edition (Substation / Utility)
+
+**English** · [中文](README.zh-CN.md)
 
 The **energy edition** of [Industrial-AIOps](https://github.com/industrial-aiops/industrial-aiops),
 split out into its own repo: read-only OT connectors for **substation / utility
@@ -62,7 +64,7 @@ substation analyzer no longer calls a lone breaker-open a "selective trip"; test
 `IAIOPS_HOME`; and the base pin was raised to `iaiops>=0.14` so the governance endpoint-scoping
 fix applies. See `CHANGELOG.md` §0.1.6. (0.1.5 verified the IEC-104 monitor path — a real `c104`
 client↔server round-trip in a Linux container, `tests/test_iec104_live.py`.)
-**Physical RTU/IED still `待核实`.** Since 0.1.3 the server has
+**Physical RTU / IED remains unverified.** Since 0.1.3 the server has
 its **own MCP identity** — `iaiops-energy-mcp` runs a dedicated `FastMCP("iaiops-energy")`
 instance with energy-specific instructions (IEC-104 / DNP3 / IEC-61850, read-first,
 no control/operate), with the base cross-protocol brain tools mirrored onto it — plus
@@ -72,30 +74,26 @@ carry the governance marker, a `[READ]`-style risk tag, an `Args:` section, and 
 canonical `{error, hint}` error shape; the server refuses to start if any registered
 tool lacks the governance marker).
 
-## 🧪 测试与共创 / Beta testing & co-creation
-
-**变电站现场的测试反馈是这个包最缺的东西。** IEC-104 / DNP3 / IEC-61850 三条监视路径均已
-对真实库(c104 / opendnp3 / libiec61850 的进程内 server)loopback 往返验证,**且三条都在每次 CI
-真实执行**——跳过会让构建失败,而不是让它变绿。(2026-08-01 起:此前 DNP3 的证据只是
-2026-07-02 的一次手工运行,因为 `pydnp3` 被认为在托管 runner 上无法构建;那个结论是错的,
-见下方 `scripts/build_pydnp3.sh`。)但 **真实 RTU / IED 物理设备一律 `待核实`** ——
-如果你能在授权的测试环境里对真实变电设备跑一遍 `iaiops doctor`,我们非常想听结果。
-经你验证的设备会署名写进支持矩阵。
+## 🧪 Beta testing & co-creation
 
 **Live substation RTU / IED / IEC-104 field testing is what this package needs most.**
 The IEC-104, DNP3 and IEC-61850 monitor paths are library-loopback-verified, and **all three
 now run on every CI build** — a skip fails the build rather than passing it. (Since
 2026-08-01: DNP3's evidence used to be a single manual run on 2026-07-02, because `pydnp3`
 was believed unbuildable on hosted runners. That belief was wrong — see
-`scripts/build_pydnp3.sh`.) Real gear stays `待核实`. Report results (protocol + device
-model + `iaiops doctor` output) via the base repo's pinned issue:
+`scripts/build_pydnp3.sh`.) **Real RTU / IED hardware remains unverified.** If you can run
+`iaiops doctor` against real substation gear in an authorised test environment, we would
+very much like to hear the result — verified devices are credited by name in the support
+matrix. Report results (protocol + device model + `iaiops doctor` output) via the base
+repo's pinned issue:
 👉 [industrial-aiops#28 — Call for field-testing partners (v0.10.0)](https://github.com/industrial-aiops/industrial-aiops/issues/28)
 
 ## Why a separate repo
 
 Energy targets a distinct buyer (utilities / substations), has heavier
 platform-specific deps (`pyiec61850` is a linux-only SWIG wheel; `pydnp3` builds a
-native ext), and its own compliance surface (电力监控系统安全防护). Splitting keeps
+native ext), and its own compliance surface (China's *Security Protection of Power
+Monitoring Systems* regime). Splitting keeps
 the base install light. See the base repo's `docs/ENERGY-SPINOUT.md` for the plan.
 
 ## Install
