@@ -9,9 +9,19 @@ pattern — a NEW tuple/dict is bound, the base objects are never mutated in pla
 
 from __future__ import annotations
 
+# Derived from the installed package metadata, like the base package does —
+# pyproject.toml is the single source of truth. The hard-coded string this
+# replaced said 0.1.3 while the package was on 0.1.11: eight releases of drift,
+# reported to anything that read it.
+from importlib.metadata import PackageNotFoundError
+from importlib.metadata import version as _pkg_version
+
 from iaiops.core.runtime import config as _config
 
-__version__ = "0.1.3"
+try:
+    __version__ = _pkg_version("iaiops-energy")
+except PackageNotFoundError:  # a source tree that was never installed
+    __version__ = "0.0.0+unknown"
 
 # Energy protocols this edition adds to the shared base, with their default
 # TCP/UDP ports (IEC-104 = 2404, DNP3 = 20000, IEC-61850 MMS = 102).

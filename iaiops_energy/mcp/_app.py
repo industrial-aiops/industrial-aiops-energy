@@ -21,6 +21,7 @@ from typing import Any, Optional
 from mcp.server.fastmcp import FastMCP
 from mcp.types import Icon, ToolAnnotations
 
+from iaiops_energy import __version__
 from iaiops_energy.mcp.hints import hints_for
 
 SERVER_NAME = "iaiops-energy"
@@ -71,6 +72,15 @@ class _GovernedFastMCP(FastMCP):
     raising and start registering nothing at all, so the tool would vanish from the
     surface with no error to notice.
     """
+
+    def __init__(self, *args: Any, **kwargs: Any) -> None:
+        super().__init__(*args, **kwargs)
+        # FastMCP takes no `version`, and the low-level server it builds defaults
+        # to None — so the initialize handshake reported the MCP SDK's version as
+        # THIS server's. A client asking which iaiops-energy it is talking to was
+        # told about the `mcp` package. Mirrors the same fix in the base repo's
+        # mcp_server/_shared.py (2026-08-02).
+        self._mcp_server.version = __version__
 
     def tool(
         self,

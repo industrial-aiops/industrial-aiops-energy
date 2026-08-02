@@ -5,6 +5,24 @@ All notable changes to `iaiops-energy` are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## 0.1.12 — 2026-08-02
+
+### Fixed
+- **`__version__` was hard-coded and eight releases stale.** It said `0.1.3` while the
+  package was on `0.1.11`, so anything reading it — including the MCP handshake below —
+  reported the wrong version. Derived from the installed package metadata now, the way
+  the base package does it, with a test pinning the two together.
+- **The MCP handshake reported the SDK's version as this server's.** `FastMCP` takes no
+  `version` and the low-level server it builds defaults to `None`, so a client asking
+  which `iaiops-energy` it was talking to was told about the `mcp` package. Same defect
+  and same fix as `iaiops` 0.22.0, found the same way — by looking at what a client
+  actually receives.
+
+### Changed
+- Requires **`iaiops>=0.22.0`**, which moves this edition onto `asyncua>=2.0` and picks
+  up that release's fixes: container images that could not write their own audit chain,
+  an RCA window that kept its oldest samples, and the two historian reader defects.
+
 ## [Unreleased]
 
 ## [0.1.11] — 2026-08-01
