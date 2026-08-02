@@ -112,3 +112,31 @@ def test_main_wires_the_no_egress_gate() -> None:
 
     source = inspect.getsource(energy_server.main)
     assert "apply_no_egress" in source, "main() never applies the no-egress gate"
+
+
+@pytest.mark.unit
+def test_the_package_version_is_not_hard_coded():
+    """`__version__` must come from the installed metadata, not a literal.
+
+    It said 0.1.3 while the package was on 0.1.11 — eight releases of drift,
+    reported to anything that read it, including the MCP handshake below.
+    """
+    from importlib.metadata import version as pkg_version
+
+    import iaiops_energy
+
+    assert iaiops_energy.__version__ == pkg_version("iaiops-energy")
+
+
+@pytest.mark.unit
+def test_the_mcp_handshake_reports_this_packages_version():
+    """A client asking which server it is talking to must not be told the SDK's.
+
+    FastMCP takes no `version` and the low-level server defaults to None, so
+    `serverInfo.version` carried the `mcp` package's version. Same defect and
+    same fix as the base repo.
+    """
+    import iaiops_energy
+    from iaiops_energy.mcp._app import mcp
+
+    assert mcp._mcp_server.version == iaiops_energy.__version__
