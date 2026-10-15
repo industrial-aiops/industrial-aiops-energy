@@ -18,7 +18,10 @@ normalized ISA-95/18.2 model), and MCP server infrastructure — this repo only 
 the three energy connectors + their session builders + MCP tools. Read-first: no
 control-direction writes are exposed.
 
-Current release: **0.1.11** (requires `iaiops>=0.20.3,<1.0`). New in 0.1.11 — **all three
+Current release: **0.1.12** (requires `iaiops>=0.22.0,<1.0`). New in 0.1.12 — the package
+reports **its own** version: `__version__` had been hard-coded at 0.1.3 for eight releases, and
+the MCP handshake reported the SDK's version as this server's; both now come from the installed
+package metadata. Previously in 0.1.11 — **all three
 monitor paths are CI-gated for the first time**, and a skipped live test now fails the build
 instead of passing it. DNP3 was the holdout: `pip install pydnp3` fails on any current Linux,
 so this repo inherited the ecosystem's "unbuildable on hosted runners" and
