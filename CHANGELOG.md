@@ -5,6 +5,14 @@ All notable changes to `iaiops-energy` are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## Unreleased
+
+### CI
+- **PyPI releases publish from CI with Trusted Publishing** (`publish-pypi.yml`, on
+  tag) — no long-lived API token. Needs a one-time trusted-publisher registration on
+  pypi.org (steps in the workflow header); until then the upload step fails and
+  changes nothing.
+
 ## 0.1.12 — 2026-08-02
 
 ### Fixed
