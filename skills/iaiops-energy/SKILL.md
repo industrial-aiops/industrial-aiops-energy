@@ -170,3 +170,10 @@ budget-tracked; errors return the canonical `{error, hint}` shape. Never point
 this at production telecontrol gear without authorization; interrogations and
 integrity polls do generate real traffic on the operational link. No tool
 returns secrets.
+
+Every MCP call is audited with `origin=mcp` and the client's self-reported name
+(since 0.2.0). This server shares the base package's audit chain: if it runs
+beside `iaiops-mcp` / the CLI on one `IAIOPS_HOME`, every process there must be
+on `iaiops>=0.29` — an older one verifying the shared trail reports
+`row_hash mismatch` on the newer rows. The server speaks **stdio only**; it has
+no HTTP listener, so `IAIOPS_MCP_TOKEN` does not apply to it.

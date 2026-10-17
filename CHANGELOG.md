@@ -7,6 +7,56 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 0.2.0 — 2026-10-17
+
+> **Requires `iaiops>=0.29.0`, and the audit-chain change it brings is one-way.** Every
+> MCP call on this server now records which front-end and which client made it. The
+> minor version moves because a shared audit trail can no longer be verified by a
+> process on the old base.
+
+### Upgrade notes — read before upgrading a site
+- **Upgrade every process that shares one `IAIOPS_HOME` together.** `iaiops` 0.29.0
+  hashes three new audit fields (`origin`, `origin_client`, `origin_session`) into the
+  tamper-evident chain. A 0.29 verifier reads an older trail cleanly — a row without
+  origin hashes exactly as before — but **an older one verifying a trail that 0.29 has
+  written to reports `row_hash mismatch`** on every new row: indistinguishable, on the
+  face of it, from tampering. That includes `iaiops-energy` 0.1.12 or earlier (it pins
+  `iaiops<0.29`), an image built on it, and the base `iaiops-mcp` / `iaiops` CLI /
+  `iaiops-enterprise` on the same home. Upgrade them as one step, then
+  `iaiops audit verify`. A site that runs this edition alone on its own home just
+  upgrades it; its existing rows still verify.
+- **No action needed for the HTTP bearer token.** `iaiops` 0.29.0 made
+  `IAIOPS_MCP_TOKEN` mandatory for an HTTP/SSE bind off loopback (iaiops #240).
+  `iaiops-energy-mcp` serves **stdio only** — it never reads `IAIOPS_MCP_TRANSPORT`
+  and opens no listener, and the Margo image/compose expose no inbound port — so
+  there is nothing for the token to protect. A test now pins that: if this edition
+  ever serves HTTP, it has to go through the base's `run_server` and inherit the gate.
+- `IAIOPS_AUDIT_OPT_OUT=reads` (new in `iaiops` 0.29.0) does not silence this
+  edition's own tools: only tools on the base's reviewed `PURE_READS` list may go
+  unrecorded, and no IEC-104 / DNP3 / IEC-61850 tool is on it. Every energy read is
+  still audited. Mirrored brain tools follow the base list.
+
+### Fixed
+- **MCP calls on this server reached the audit trail as `origin=""` (unknown).**
+  `iaiops` 0.29.0 records each call's origin at the front-end's own boundary, and the
+  base declares it in its own server's `call_tool`. This edition runs its own
+  `FastMCP` instance, so neither the energy tools nor the brain tools mirrored onto it
+  passed through that boundary: on a shared trail, every call made here looked like
+  library code — neither agent nor operator. `_GovernedFastMCP.call_tool` now opens the
+  same scope with the base's shared `mcp_origin`, so each row carries `origin=mcp`, the
+  client's self-reported `clientInfo` (name/version — unverified, as upstream) and one
+  id per client connection. Tested through a real in-memory client session, for an
+  energy tool and a mirrored brain tool. (Left as a known follow-up by iaiops #250.)
+
+### Changed
+- Requires **`iaiops>=0.29.0`** (was `>=0.22.0`), and with it everything that release
+  changed in the shared core and in the brain mirrored here: OEE stop attribution,
+  companion-spec tag-role hints, NIS2 / CRA crosswalks, the audit opt-out, `iaiops reset`.
+  The surface is now **80 tools** (75 `readOnlyHint`, **0 destructive**). The energy
+  connectors themselves are unchanged and still monitor-only.
+- `deploy/margo`: the descriptor's `version` and the Dockerfile's default
+  `IAIOPS_ENERGY_VERSION` both said **0.1.11** through the 0.1.12 release; now 0.2.0.
+
 ### CI
 - **PyPI releases publish from CI with Trusted Publishing** (`publish-pypi.yml`, on
   tag) — no long-lived API token. Needs a one-time trusted-publisher registration on
@@ -30,8 +80,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Requires **`iaiops>=0.22.0`**, which moves this edition onto `asyncua>=2.0` and picks
   up that release's fixes: container images that could not write their own audit chain,
   an RCA window that kept its oldest samples, and the two historian reader defects.
-
-## [Unreleased]
 
 ## [0.1.11] — 2026-08-01
 

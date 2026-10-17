@@ -18,7 +18,14 @@ normalized ISA-95/18.2 model), and MCP server infrastructure — this repo only 
 the three energy connectors + their session builders + MCP tools. Read-first: no
 control-direction writes are exposed.
 
-Current release: **0.1.12** (requires `iaiops>=0.22.0,<1.0`). New in 0.1.12 — the package
+Current release: **0.2.0** (requires `iaiops>=0.29.0,<1.0`). New in 0.2.0 — every MCP call on
+this server is audited with **which front-end and which client made it** (`origin=mcp`, the
+client's self-reported name, one id per connection); before this, calls here reached the trail
+as origin *unknown*. **Upgrade note:** `iaiops` 0.29 hashes those fields into the audit chain,
+and an older base verifying a trail 0.29 has written to reports `row_hash mismatch` — so
+upgrade every process sharing one `IAIOPS_HOME` (this server, `iaiops-mcp`, the CLI,
+enterprise) together. The base's new HTTP bearer-token requirement does not apply here: this
+server speaks stdio only. See `CHANGELOG.md`. Previously in 0.1.12 — the package
 reports **its own** version: `__version__` had been hard-coded at 0.1.3 for eight releases, and
 the MCP handshake reported the SDK's version as this server's; both now come from the installed
 package metadata. Previously in 0.1.11 — **all three
