@@ -140,3 +140,23 @@ def test_the_mcp_handshake_reports_this_packages_version():
     from iaiops_energy.mcp._app import mcp
 
     assert mcp._mcp_server.version == iaiops_energy.__version__
+
+
+@pytest.mark.unit
+def test_main_serves_stdio_only_even_when_a_network_transport_is_asked_for(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """This server has no network listener, so the base's HTTP bearer token cannot apply.
+
+    ``iaiops`` 0.29.0 made ``IAIOPS_MCP_TOKEN`` mandatory for an HTTP/SSE bind off
+    loopback — enforced in the base's ``mcp_server.transport.run_server``. This edition
+    calls ``mcp.run()`` with no transport, i.e. stdio, and never reads
+    ``IAIOPS_MCP_TRANSPORT``: there is no socket to protect. The release notes say so;
+    this keeps that true. If this edition ever serves HTTP, route it through the base's
+    ``run_server`` so it inherits the token gate rather than calling ``mcp.run("sse")``.
+    """
+    calls: list[tuple[tuple[Any, ...], dict[str, Any]]] = []
+    monkeypatch.setenv("IAIOPS_MCP_TRANSPORT", "streamable-http")
+    monkeypatch.setattr(energy_server.mcp, "run", lambda *a, **kw: calls.append((a, kw)))
+    energy_server.main()
+    assert calls == [((), {})]
