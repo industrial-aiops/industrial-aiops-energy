@@ -15,9 +15,10 @@ crashes FastMCP's ``issubclass`` check.
 
 from __future__ import annotations
 
-from collections.abc import Callable
+from collections.abc import Callable, Sequence
 from typing import Any, Optional
 
+from iaiops.core.governance.origin import mcp_origin, origin_scope
 from mcp.server.fastmcp import FastMCP
 from mcp.types import Icon, ToolAnnotations
 
@@ -110,6 +111,30 @@ class _GovernedFastMCP(FastMCP):
             )(fn)
 
         return decorator
+
+    async def call_tool(
+        self, name: str, arguments: dict[str, Any]
+    ) -> Sequence[Any] | dict[str, Any]:
+        """Every ``tools/call`` runs inside an MCP call-origin scope.
+
+        This is the MCP boundary, and this edition owns it: the base server's
+        ``call_tool`` declares the origin on the base instance, not on this one. So
+        before this override, every call here — energy tools and the mirrored brain
+        tools alike — reached the audit trail as ``origin=""`` (unknown). Mirrors
+        ``_GovernedFastMCP.call_tool`` in the base repo's ``mcp_server/_shared.py``
+        (iaiops 0.29.0).
+        """
+        with origin_scope(_mcp_origin(self)):
+            return await super().call_tool(name, arguments)
+
+
+def _mcp_origin(server: FastMCP) -> Any:
+    """The origin of the current ``tools/call`` (see ``iaiops`` ``origin.mcp_origin``)."""
+    try:
+        session = server._mcp_server.request_context.session
+    except LookupError:
+        session = None
+    return mcp_origin(session)
 
 
 mcp = _GovernedFastMCP(SERVER_NAME, instructions=INSTRUCTIONS)
