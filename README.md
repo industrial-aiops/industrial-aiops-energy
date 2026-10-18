@@ -18,7 +18,7 @@ normalized ISA-95/18.2 model), and MCP server infrastructure — this repo only 
 the three energy connectors + their session builders + MCP tools. Read-first: no
 control-direction writes are exposed.
 
-Current release: **0.2.0** (requires `iaiops>=0.29.0,<1.0`). New in 0.2.0 — every MCP call on
+Current release: **0.2.0** (requires `iaiops>=0.29.0,<1.0`; tested against `iaiops` 0.31.0). On the wire: **80 tools, 75 read-only, 0 destructive** (the energy connectors plus the base brain tools mounted on this server). New in 0.2.0 — every MCP call on
 this server is audited with **which front-end and which client made it** (`origin=mcp`, the
 client's self-reported name, one id per connection); before this, calls here reached the trail
 as origin *unknown*. **Upgrade note:** `iaiops` 0.29 hashes those fields into the audit chain,
@@ -49,7 +49,7 @@ rows. The energy connectors themselves take no credential parameters. Previously
 ships the MCP `ToolAnnotations` hints (`readOnlyHint` / `destructiveHint` / `openWorldHint`),
 **derived** from the `@governed_tool` harness rather than hand-written, so a client can tell a
 monitor read from a tool that acts without parsing the `[READ]`/`[WRITE]` docstring tag. On the
-wire that is 59 tools, 55 read-only and **0 destructive** — this edition exposes no control
+wire that was (in 0.1.9) 59 tools, 55 read-only and **0 destructive** — this edition exposes no control
 direction, and that is now enforced by a test rather than only documented. They are hints, not a
 gate: the MCP spec forbids relying on annotations for security decisions, and enforcement stays in
 `@governed_tool`. The base pin moved to `iaiops>=0.20.1` so the hint derivation is imported from
