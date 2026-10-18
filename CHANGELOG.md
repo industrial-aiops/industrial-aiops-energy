@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+### Docs
+
+- Both READMEs state the current tool count — **80 tools, 75 read-only, 0
+  destructive** (energy connectors + the base brain mounted here), counted from
+  the 0.2.0 server — and mark the old "59 tools, 55 read-only" as the 0.1.9 figure
+  it was. Tested against `iaiops` 0.31.0.
+
 ## 0.2.0 — 2026-10-17
 
 > **Requires `iaiops>=0.29.0`, and the audit-chain change it brings is one-way.** Every
