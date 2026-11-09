@@ -8,7 +8,7 @@
 # taken at face value here for a long time and `tests/test_dnp3_live.py` — the
 # only coverage the DNP3 monitor path has — was skipped on every CI run.
 #
-# It is not unbuildable. It needs three mechanical fixes, none of which touch
+# It is not unbuildable. It needs four mechanical fixes, none of which touch
 # opendnp3 itself (that C++ library builds clean):
 #
 #   1. Python headers must be present (`python3-dev`). Without them the build
@@ -20,6 +20,8 @@
 #      `PyFrameObject` internals that CPython 3.11 made opaque, and it declares
 #      `std::uint16_t` without including `<cstdint>`, which GCC 13 rejects.
 #      Replaced wholesale with pybind11 v2.13.6, which supports 3.12.
+#   4. CMake 4 rejects the package's old minimum-policy declarations (2.8).
+#      Raise only those declarations to 3.5 in the temporary build tree.
 #
 # Fix 3 is why the "no wheel, needs a native build" story was only half right:
 # the native build is fine, the *binding* is what had rotted.
@@ -72,6 +74,30 @@ echo "==> replacing vendored pybind11 with v${PYBIND11_VERSION}"
 rm -rf deps/pybind11
 mkdir -p deps/pybind11
 tar xzf "${WORK}/pybind11.tar.gz" -C deps/pybind11 --strip-components=1
+
+echo "==> updating obsolete CMake minimum-policy declarations"
+"${VENV}/bin/python" - <<'PY'
+from pathlib import Path
+import re
+
+pattern = re.compile(r"(cmake_minimum_required\s*\(\s*VERSION\s+)(\d+\.\d+(?:\.\d+)?)", re.I)
+updated = 0
+for path in list(Path(".").rglob("CMakeLists.txt")) + list(Path(".").rglob("*.cmake")):
+    original = path.read_text()
+
+    def replace(match):
+        global updated
+        if tuple(int(n) for n in match.group(2).split(".")) < (3, 5):
+            updated += 1
+            return match.group(1) + "3.5"
+        return match.group(0)
+
+    amended = pattern.sub(replace, original)
+    if amended != original:
+        path.write_text(amended)
+assert updated >= 2, "expected the upstream 2.8 policy declarations"
+print(f"    {updated} CMake minimum-policy declarations updated")
+PY
 
 echo "==> compiling (this builds opendnp3 from source — a few minutes)"
 if command -v uv >/dev/null 2>&1; then
