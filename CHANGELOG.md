@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## 0.2.1 — 2026-11-14
+
+- Clarify the Energy MCP directory description and native-library limitations.
+- Include Glama claim/listing guidance with maintainer `zw008`.
+- Lock the development environment to iaiops 0.34.0 and record compatibility
+  evidence. Native protocol loopback validation passed separately in Linux CI;
+  physical RTU/IED validation remains outstanding.
+- No new protocol operations or control-direction writes.
+
 - Update the development lock to iaiops 0.34.0; local compatibility evidence and
   native-library test limits are recorded in `docs/VERIFICATION.md`.
 

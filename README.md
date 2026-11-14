@@ -34,7 +34,7 @@ stdio; native-library installation requirements and protocol verification differ
 by platform. These capabilities do not imply certification or validation against
 every IED or RTU. See [Glama listing text](docs/GLAMA.md).
 
-Current release: **0.2.0** (requires `iaiops>=0.29.0,<1.0`; tested against `iaiops` 0.31.0). On the wire: **80 tools, 75 read-only, 0 destructive** (the energy connectors plus the base brain tools mounted on this server). New in 0.2.0 — every MCP call on
+Current release: **0.2.1** (requires `iaiops>=0.29.0,<1.0`; 0.2.0 release tested against `iaiops` 0.31.0; 0.2.1 compatibility checked against 0.34.0). On the wire: **80 tools, 75 read-only, 0 destructive** (the energy connectors plus the base brain tools mounted on this server). New in 0.2.0 — every MCP call on
 this server is audited with **which front-end and which client made it** (`origin=mcp`, the
 client's self-reported name, one id per connection); before this, calls here reached the trail
 as origin *unknown*. **Upgrade note:** `iaiops` 0.29 hashes those fields into the audit chain,
