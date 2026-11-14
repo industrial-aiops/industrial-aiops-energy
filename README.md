@@ -18,6 +18,19 @@ normalized ISA-95/18.2 model), and MCP server infrastructure — this repo only 
 the three energy connectors + their session builders + MCP tools. Read-first: no
 control-direction writes are exposed.
 
+## MCP directory overview
+
+Industrial-AIOps Energy helps agents inspect substation and utility telemetry
+through IEC 60870-5-104, DNP3 and IEC 61850 MMS. Example tasks include inspecting
+point values and quality, comparing observations across configured endpoints,
+and feeding normalized observations into the shared diagnostic engine.
+
+The energy connectors expose monitoring operations, with no control-direction
+writes. MCP calls use the base audit and governance engine. This server uses
+stdio; native-library installation requirements and protocol verification differ
+by platform. These capabilities do not imply certification or validation against
+every IED or RTU. See [Glama listing text](docs/GLAMA.md).
+
 Current release: **0.2.0** (requires `iaiops>=0.29.0,<1.0`; tested against `iaiops` 0.31.0). On the wire: **80 tools, 75 read-only, 0 destructive** (the energy connectors plus the base brain tools mounted on this server). New in 0.2.0 — every MCP call on
 this server is audited with **which front-end and which client made it** (`origin=mcp`, the
 client's self-reported name, one id per connection); before this, calls here reached the trail
