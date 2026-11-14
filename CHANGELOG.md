@@ -7,6 +7,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+- Update the development lock to iaiops 0.34.0; local compatibility evidence and
+  native-library test limits are recorded in `docs/VERIFICATION.md`.
+
 ### Docs
 
 - Both READMEs state the current tool count — **80 tools, 75 read-only, 0

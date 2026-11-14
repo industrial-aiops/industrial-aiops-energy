@@ -328,7 +328,7 @@ wheels = [
 
 [[package]]
 name = "iaiops"
-version = "0.33.0"
+version = "0.34.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "cryptography" },
@@ -338,9 +338,9 @@ dependencies = [
     { name = "rich" },
     { name = "typer" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/0d/e9/0d29c2ce97d1ed2370c0582db60689c9fe6e5b2fe5f9ef9325b43c10ba29/iaiops-0.33.0.tar.gz", hash = "sha256:bed5e5711a31a22459941f4f613635451e3a986deb6190458d69b6be60bb3346", size = 2325511, upload-time = "2026-11-09T00:13:03.354Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/f3/77/5baa2b0d7021ac993c13d8ec2d4edee30ff1c463f3523f42e2ebd15d44ea/iaiops-0.34.0.tar.gz", hash = "sha256:95c5142bb40a7ba7d19e727539aa8f78f266f3227885df9f7df678c91086179c", size = 2343641, upload-time = "2026-11-09T12:58:01.1Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/4e/93/0c444c959c3c7dfd30cbf7e2d75772e78ed49985ec8839e57e739d449ad0/iaiops-0.33.0-py3-none-any.whl", hash = "sha256:b1751ea223b22c514dde57373f484025e89db0b487af80ff064677c6d474f487", size = 1241745, upload-time = "2026-11-09T00:13:00.9Z" },
+    { url = "https://files.pythonhosted.org/packages/b7/5c/43fb137ba85df510709fd741084906d41fc8e0be13faeab371f52007b757/iaiops-0.34.0-py3-none-any.whl", hash = "sha256:22f2d868960cb21402eb3da09700ec8939918e64403f18529d310e6d78c71a25", size = 1244267, upload-time = "2026-11-09T12:57:59.23Z" },
 ]
 
 [[package]]

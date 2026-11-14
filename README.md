@@ -18,6 +18,9 @@ normalized ISA-95/18.2 model), and MCP server infrastructure — this repo only 
 the three energy connectors + their session builders + MCP tools. Read-first: no
 control-direction writes are exposed.
 
+Local compatibility with `iaiops` 0.34.0 was checked on 2026-11-14: 99 tests passed;
+three native protocol tests skipped on macOS. See [verification details](docs/VERIFICATION.md).
+
 ## MCP directory overview
 
 Industrial-AIOps Energy helps agents inspect substation and utility telemetry
