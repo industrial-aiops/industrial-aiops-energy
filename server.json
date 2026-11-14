@@ -2,7 +2,7 @@
   "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
   "name": "io.github.industrial-aiops/iaiops-energy",
   "title": "Industrial-AIOps Energy",
-  "description": "Industrial-AIOps energy edition: IEC-104/DNP3/IEC-61850 read-only OT connectors on iaiops.core.",
+  "description": "Read-only IEC-104, DNP3 and IEC 61850 monitoring with governed MCP tools for energy systems.",
   "repository": {
     "url": "https://github.com/industrial-aiops/industrial-aiops-energy",
     "source": "github"
@@ -33,7 +33,7 @@
         },
         {
           "name": "IAIOPS_NO_EGRESS",
-          "description": "Set to 1 to withhold every data-shipping tool (message bus, external historian, remote LLM) from list_tools() at registration time, for an airgap/sealed-box deployment. A data-exfiltration axis only, not read/write authorisation — every tool is governed and audited. This edition's connectors are monitor-only, so what this withholds are the base brain tools mirrored in from iaiops. Requires iaiops>=0.19.",
+          "description": "Set to 1 to withhold every data-shipping tool (message bus, external historian, remote LLM) from list_tools() at registration time, for an airgap/sealed-box deployment. A data-exfiltration axis only, not read/write authorisation \u2014 every tool is governed and audited. This edition's connectors are monitor-only, so what this withholds are the base brain tools mirrored in from iaiops. Requires iaiops>=0.19.",
           "isRequired": false,
           "isSecret": false
         }
