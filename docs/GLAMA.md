@@ -26,7 +26,7 @@ server's `iaiops-mcp` command or require its profile selector for this standalon
 energy server.
 
 Update the Glama profile description and request a repository sync after merging.
-The current repository release is 0.2.0; check the public listing for an older
+The current repository release is 0.2.1; check the public listing for an older
 cached README/version. A repository change does not establish that Glama has
 refreshed its profile or successfully built a container.
 
